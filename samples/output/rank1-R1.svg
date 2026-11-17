@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="612.29" viewBox="0 0 960 612.29" font-family="Helvetica, Arial, sans-serif">
+<defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#9a9a9a" stroke-width="2"/></pattern></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="30" y="26" font-size="17" font-weight="bold">FROM WAREHOUSE: R1 v4 · 1,400 long × 800 mm high</text>
+<rect x="30" y="46" width="900" height="514.29" fill="#f7f3ea" stroke="#222" stroke-width="1.5"/>
+<g stroke="#e2d9c4" stroke-width="1"><line x1="30" y1="63.14" x2="930" y2="63.14"/><line x1="30" y1="80.29" x2="930" y2="80.29"/><line x1="30" y1="97.43" x2="930" y2="97.43"/><line x1="30" y1="114.57" x2="930" y2="114.57"/><line x1="30" y1="131.71" x2="930" y2="131.71"/><line x1="30" y1="148.86" x2="930" y2="148.86"/><line x1="30" y1="166" x2="930" y2="166"/><line x1="30" y1="183.14" x2="930" y2="183.14"/><line x1="30" y1="200.29" x2="930" y2="200.29"/><line x1="30" y1="217.43" x2="930" y2="217.43"/><line x1="30" y1="234.57" x2="930" y2="234.57"/><line x1="30" y1="251.71" x2="930" y2="251.71"/><line x1="30" y1="268.86" x2="930" y2="268.86"/><line x1="30" y1="286" x2="930" y2="286"/><line x1="30" y1="303.14" x2="930" y2="303.14"/><line x1="30" y1="320.29" x2="930" y2="320.29"/><line x1="30" y1="337.43" x2="930" y2="337.43"/><line x1="30" y1="354.57" x2="930" y2="354.57"/><line x1="30" y1="371.71" x2="930" y2="371.71"/><line x1="30" y1="388.86" x2="930" y2="388.86"/><line x1="30" y1="406" x2="930" y2="406"/><line x1="30" y1="423.14" x2="930" y2="423.14"/><line x1="30" y1="440.29" x2="930" y2="440.29"/><line x1="30" y1="457.43" x2="930" y2="457.43"/><line x1="30" y1="474.57" x2="930" y2="474.57"/><line x1="30" y1="491.71" x2="930" y2="491.71"/><line x1="30" y1="508.86" x2="930" y2="508.86"/><line x1="30" y1="526" x2="930" y2="526"/><line x1="30" y1="543.14" x2="930" y2="543.14"/></g>
+<rect x="486.43" y="264.57" width="443.57" height="295.71" fill="#d8f0d2" fill-opacity="0.85" stroke="#7a7a7a" stroke-width="0.8"/>
+<text x="708.21" y="416.25" font-size="10.93" text-anchor="middle" fill="#3c5a35">reusable 690×460</text>
+<rect x="30" y="46" width="900" height="218.57" fill="#d8f0d2" fill-opacity="0.85" stroke="#7a7a7a" stroke-width="0.8"/>
+<text x="480" y="159.11" font-size="10.93" text-anchor="middle" fill="#3c5a35">reusable 1,400×340</text>
+<rect x="30" y="264.57" width="456.43" height="295.71" fill="#cfe2f7" fill-opacity="0.9" stroke="#1f4e79" stroke-width="1"/>
+<rect x="33.21" y="267.79" width="450" height="289.29" fill="none" stroke="#1f4e79" stroke-dasharray="4 3" stroke-width="0.8"/>
+<text x="258.21" y="284.08" font-size="9.26" text-anchor="middle" fill="#1f4e79">710</text>
+<text x="47.2" y="412.43" font-size="9.26" text-anchor="middle" fill="#1f4e79" transform="rotate(-90 47.2 412.43)">460</text>
+<text x="258.21" y="397.56" font-size="12.86" font-weight="bold" text-anchor="middle">P2#1</text>
+<text x="258.21" y="411.8" font-size="10.93" font-weight="bold" text-anchor="middle">Cut-out 460 × 710 mm</text>
+<text x="258.21" y="424.36" font-size="9.77" text-anchor="middle">finished 450 × 700 · pad 5</text>
+<text x="258.21" y="436.58" font-size="9.77" text-anchor="middle">turned 90° · grain ↕</text>
+<line x1="30" y1="264.57" x2="930" y2="264.57" stroke="#c0392b" stroke-width="1.4"/>
+<circle cx="255" cy="264.57" r="9.64" fill="#c0392b"/><text x="255" y="268.43" font-size="9.64" text-anchor="middle" fill="#fff">1</text>
+<line x1="486.43" y1="560.29" x2="486.43" y2="264.57" stroke="#c0392b" stroke-width="1.4"/>
+<circle cx="486.43" cy="486.36" r="9.64" fill="#c0392b"/><text x="486.43" y="490.21" font-size="9.64" text-anchor="middle" fill="#fff">2</text>
+<text x="30" y="580.29" font-size="11" fill="#555">Cut in numbered order, each cut edge to edge (red) · blue = cut-out, dashed = finished size · green = reusable leftover · hatched = scrap · sizes in mm</text>
+<text x="30" y="595.29" font-size="9" fill="#888">Plan C-9eb347fb8bda0bb5</text>
+</svg>

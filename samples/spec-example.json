@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "jobRevisionId": "revision-id",
+  "materialId": "material-id",
+  "materialDirectional": true,
+  "pieces": [
+    {
+      "id": "P1",
+      "widthMm": 600,
+      "lengthMm": 900,
+      "quantity": 2,
+      "orientation": "Vertical",
+      "paddingMm": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
+    },
+    {
+      "id": "P2",
+      "widthMm": 450,
+      "lengthMm": 700,
+      "quantity": 1,
+      "orientation": "None",
+      "paddingMm": { "top": 5, "right": 5, "bottom": 5, "left": 5 }
+    }
+  ],
+  "rollOffers": [
+    { "offerId": "roll-2800", "widthMm": 2800, "pricePerSquareMetre": 12.50, "currency": "EUR", "minOrderMetres": 1 }
+  ],
+  "stock": [
+    { "stockId": "R1", "widthMm": 800, "lengthMm": 1400, "patternAxis": "Length", "version": 4 }
+  ],
+  "minimumReusableRemnant": { "minWidthMm": 200, "minLengthMm": 300 },
+  "search": { "timeBudgetMs": 5000, "seed": 12345, "maxCandidates": 3 }
+}

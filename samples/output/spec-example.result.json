@@ -1,0 +1,1745 @@
+{
+  "runId": "4b9c752c8a604277b14d3e84dc59791c",
+  "inputHash": "082e2591a25c4917d4aaaa56dedcc233cda99ed930cbe1c992ec8450366518cb",
+  "schemaVersion": 1,
+  "solverVersion": "dreamglass-hybrid/1.3.0",
+  "objectiveVersion": "cheapest-first",
+  "objectiveApproved": true,
+  "validatorVersion": "dreamglass-validator/1.2.0",
+  "seed": 12345,
+  "mode": "Deterministic",
+  "elapsedMs": 396,
+  "timeBudgetMs": 5000,
+  "status": "Succeeded",
+  "stopReason": "WorkBudget",
+  "resultHash": "3c538ad7b2eb1d5c622b02f62f15343433f20bac3115b631bbad47e468d87234",
+  "diagnostics": {
+    "warnings": [],
+    "infeasibilityReasons": [],
+    "failureMessage": null,
+    "constructionsAttempted": 1125,
+    "completePlansBuilt": 1902,
+    "plansValidated": 40,
+    "plansRejectedByValidator": 0,
+    "beamRuns": 9,
+    "improvementIterations": 1321,
+    "poolSize": 40,
+    "workUnitsUsed": 2500,
+    "reproducible": true,
+    "phases": [
+      {
+        "phase": "exact",
+        "elapsedMs": 101,
+        "iterations": 1
+      },
+      {
+        "phase": "constructive",
+        "elapsedMs": 79,
+        "iterations": 1125
+      },
+      {
+        "phase": "beam",
+        "elapsedMs": 11,
+        "iterations": 9
+      },
+      {
+        "phase": "improve",
+        "elapsedMs": 80,
+        "iterations": 1
+      }
+    ],
+    "exact": {
+      "attempted": true,
+      "completed": true,
+      "reason": "Completed: minimum purchased area proven over all guillotine plans and source assignments.",
+      "statesExplored": 7,
+      "elapsedMs": 30,
+      "provenMinPurchasedAreaM2": 2.8,
+      "provenInfeasible": false
+    },
+    "purchasedAreaLowerBoundM2": 2.8,
+    "purchasedAreaLowerBoundMethod": "ExactGuillotineDP",
+    "rejectionSamples": []
+  },
+  "inputErrors": [],
+  "candidates": [
+    {
+      "candidateId": "C-9eb347fb8bda0bb5",
+      "rank": 1,
+      "qualityStatus": "BoundedGap",
+      "bound": {
+        "scope": "Tier 1 only: newly purchased area (m\u00B2). Lower tiers (scrap, remnant quality, cost, cuts) are not bounded.",
+        "method": "ExactGuillotineDP",
+        "lowerBoundM2": 2.8,
+        "gapM2": 0.0,
+        "note": "Purchased area is proven minimal by exhaustive guillotine search."
+      },
+      "tags": [
+        "Best by objective",
+        "Fewest cuts",
+        "Lowest purchase cost",
+        "Best using roll offer roll-2800"
+      ],
+      "warnings": [
+        "Predicted reusable offcuts are not inventory until physically confirmed after cutting."
+      ],
+      "origin": "restart:joint:roll-2800:Random:FitFirst/LargestFirst/BestLongSideFit/VerticalFirst/rows",
+      "metrics": {
+        "requiredCutAreaM2": 1.4066,
+        "purchasedAreaM2": 2.8,
+        "purchaseCost": 35.000,
+        "currency": "EUR",
+        "existingStockAreaConsumedM2": 1.12,
+        "totalResidualAreaM2": 2.5134,
+        "reusableResidualAreaM2": 2.2334,
+        "unusableScrapAreaM2": 0.28,
+        "reusableOffcutCount": 3,
+        "reusableOffcuts": [
+          {
+            "width": 1600,
+            "length": 900
+          },
+          {
+            "width": 340,
+            "length": 1400
+          },
+          {
+            "width": 460,
+            "length": 690
+          }
+        ],
+        "largestReusableAreaM2": 1.44,
+        "minReusableDimensionMm": 340,
+        "fragmentCount": 4,
+        "thinFragmentCount": 1,
+        "fragmentationIndex": 0.427071,
+        "consumedLengthMm": 900,
+        "orderedLengthMetres": 1,
+        "roundingSurplusMm": 100,
+        "totalCuts": 5,
+        "sourcesUsed": 2,
+        "warehouseSourcesUsed": 1,
+        "materialUtilization": 0.358827
+      },
+      "requiresPurchase": true,
+      "purchase": {
+        "rollOfferId": "roll-2800",
+        "orderedWidthMm": 2800,
+        "orderedLengthMetres": 1,
+        "consumedLengthMm": 900,
+        "paddingLengthMm": 0,
+        "lengthWithoutPaddingMm": 900,
+        "roundingSurplusMm": 100,
+        "purchasedAreaM2": 2.8,
+        "pricePerSquareMetre": 12.50,
+        "purchaseCost": 35.000,
+        "currency": "EUR",
+        "fixedLength": false
+      },
+      "sources": [
+        {
+          "sourceId": "R1",
+          "kind": "WarehouseRemnant",
+          "stockId": "R1",
+          "stockVersion": 4,
+          "rollOfferId": null,
+          "binReference": null,
+          "widthMm": 800,
+          "lengthMm": 1400,
+          "patternAxis": "Length",
+          "displayRotationDegrees": 270,
+          "displayWidthMm": 1400,
+          "displayLengthMm": 800,
+          "areaM2": 1.12
+        },
+        {
+          "sourceId": "new-roll:roll-2800",
+          "kind": "NewRoll",
+          "stockId": null,
+          "stockVersion": null,
+          "rollOfferId": "roll-2800",
+          "binReference": null,
+          "widthMm": 2800,
+          "lengthMm": 1000,
+          "patternAxis": "Length",
+          "displayRotationDegrees": 270,
+          "displayWidthMm": 1000,
+          "displayLengthMm": 2800,
+          "areaM2": 2.8
+        }
+      ],
+      "placements": [
+        {
+          "pieceInstanceId": "P2#1",
+          "pieceId": "P2",
+          "label": "P2",
+          "sourceId": "R1",
+          "footprint": {
+            "x": 0,
+            "y": 0,
+            "width": 460,
+            "length": 710
+          },
+          "nominalRect": {
+            "x": 5,
+            "y": 5,
+            "width": 450,
+            "length": 700
+          },
+          "nominalWidthMm": 450,
+          "nominalLengthMm": 700,
+          "cutWidthMm": 460,
+          "cutLengthMm": 710,
+          "paddingMm": {
+            "top": 5,
+            "right": 5,
+            "bottom": 5,
+            "left": 5
+          },
+          "pieceRotated": false,
+          "pieceRotationDegrees": 0,
+          "sourceDisplayRotationDegrees": 270,
+          "finishedPatternDirection": "Vertical"
+        },
+        {
+          "pieceInstanceId": "P1#1",
+          "pieceId": "P1",
+          "label": "P1",
+          "sourceId": "new-roll:roll-2800",
+          "footprint": {
+            "x": 0,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalRect": {
+            "x": 0,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalWidthMm": 600,
+          "nominalLengthMm": 900,
+          "cutWidthMm": 600,
+          "cutLengthMm": 900,
+          "paddingMm": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "pieceRotated": false,
+          "pieceRotationDegrees": 0,
+          "sourceDisplayRotationDegrees": 270,
+          "finishedPatternDirection": "Vertical"
+        },
+        {
+          "pieceInstanceId": "P1#2",
+          "pieceId": "P1",
+          "label": "P1",
+          "sourceId": "new-roll:roll-2800",
+          "footprint": {
+            "x": 600,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalRect": {
+            "x": 600,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalWidthMm": 600,
+          "nominalLengthMm": 900,
+          "cutWidthMm": 600,
+          "cutLengthMm": 900,
+          "paddingMm": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "pieceRotated": false,
+          "pieceRotationDegrees": 0,
+          "sourceDisplayRotationDegrees": 270,
+          "finishedPatternDirection": "Vertical"
+        }
+      ],
+      "cutTrees": [
+        {
+          "sourceId": "R1",
+          "rootNodeId": "R1/n1",
+          "nodes": [
+            {
+              "nodeId": "R1/n1",
+              "kind": "Cut",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 800,
+                "length": 1400
+              },
+              "axis": "Vertical",
+              "positionMm": 460,
+              "firstChildId": "R1/n2",
+              "secondChildId": "R1/n5",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "R1/n2",
+              "kind": "Cut",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 460,
+                "length": 1400
+              },
+              "axis": "Horizontal",
+              "positionMm": 710,
+              "firstChildId": "R1/n3",
+              "secondChildId": "R1/n4",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "R1/n3",
+              "kind": "Piece",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 460,
+                "length": 710
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": "P2#1",
+              "residualId": null
+            },
+            {
+              "nodeId": "R1/n4",
+              "kind": "Residual",
+              "region": {
+                "x": 0,
+                "y": 710,
+                "width": 460,
+                "length": 690
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": null,
+              "residualId": "R1/r1"
+            },
+            {
+              "nodeId": "R1/n5",
+              "kind": "Residual",
+              "region": {
+                "x": 460,
+                "y": 0,
+                "width": 340,
+                "length": 1400
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": null,
+              "residualId": "R1/r2"
+            }
+          ]
+        },
+        {
+          "sourceId": "new-roll:roll-2800",
+          "rootNodeId": "new-roll:roll-2800/n1",
+          "nodes": [
+            {
+              "nodeId": "new-roll:roll-2800/n1",
+              "kind": "Cut",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 2800,
+                "length": 1000
+              },
+              "axis": "Horizontal",
+              "positionMm": 900,
+              "firstChildId": "new-roll:roll-2800/n2",
+              "secondChildId": "new-roll:roll-2800/n7",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n2",
+              "kind": "Cut",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 2800,
+                "length": 900
+              },
+              "axis": "Vertical",
+              "positionMm": 600,
+              "firstChildId": "new-roll:roll-2800/n3",
+              "secondChildId": "new-roll:roll-2800/n4",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n3",
+              "kind": "Piece",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 600,
+                "length": 900
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": "P1#1",
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n4",
+              "kind": "Cut",
+              "region": {
+                "x": 600,
+                "y": 0,
+                "width": 2200,
+                "length": 900
+              },
+              "axis": "Vertical",
+              "positionMm": 1200,
+              "firstChildId": "new-roll:roll-2800/n5",
+              "secondChildId": "new-roll:roll-2800/n6",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n5",
+              "kind": "Piece",
+              "region": {
+                "x": 600,
+                "y": 0,
+                "width": 600,
+                "length": 900
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": "P1#2",
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n6",
+              "kind": "Residual",
+              "region": {
+                "x": 1200,
+                "y": 0,
+                "width": 1600,
+                "length": 900
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": null,
+              "residualId": "new-roll:roll-2800/r1"
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n7",
+              "kind": "Residual",
+              "region": {
+                "x": 0,
+                "y": 900,
+                "width": 2800,
+                "length": 100
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": null,
+              "residualId": "new-roll:roll-2800/r2"
+            }
+          ]
+        }
+      ],
+      "cutSteps": [
+        {
+          "sequence": 1,
+          "sourceId": "R1",
+          "nodeId": "R1/n1",
+          "axis": "Vertical",
+          "positionMm": 460,
+          "region": {
+            "x": 0,
+            "y": 0,
+            "width": 800,
+            "length": 1400
+          },
+          "fromXMm": 460,
+          "fromYMm": 0,
+          "toXMm": 460,
+          "toYMm": 1400
+        },
+        {
+          "sequence": 2,
+          "sourceId": "R1",
+          "nodeId": "R1/n2",
+          "axis": "Horizontal",
+          "positionMm": 710,
+          "region": {
+            "x": 0,
+            "y": 0,
+            "width": 460,
+            "length": 1400
+          },
+          "fromXMm": 0,
+          "fromYMm": 710,
+          "toXMm": 460,
+          "toYMm": 710
+        },
+        {
+          "sequence": 3,
+          "sourceId": "new-roll:roll-2800",
+          "nodeId": "new-roll:roll-2800/n1",
+          "axis": "Horizontal",
+          "positionMm": 900,
+          "region": {
+            "x": 0,
+            "y": 0,
+            "width": 2800,
+            "length": 1000
+          },
+          "fromXMm": 0,
+          "fromYMm": 900,
+          "toXMm": 2800,
+          "toYMm": 900
+        },
+        {
+          "sequence": 4,
+          "sourceId": "new-roll:roll-2800",
+          "nodeId": "new-roll:roll-2800/n2",
+          "axis": "Vertical",
+          "positionMm": 600,
+          "region": {
+            "x": 0,
+            "y": 0,
+            "width": 2800,
+            "length": 900
+          },
+          "fromXMm": 600,
+          "fromYMm": 0,
+          "toXMm": 600,
+          "toYMm": 900
+        },
+        {
+          "sequence": 5,
+          "sourceId": "new-roll:roll-2800",
+          "nodeId": "new-roll:roll-2800/n4",
+          "axis": "Vertical",
+          "positionMm": 1200,
+          "region": {
+            "x": 600,
+            "y": 0,
+            "width": 2200,
+            "length": 900
+          },
+          "fromXMm": 1200,
+          "fromYMm": 0,
+          "toXMm": 1200,
+          "toYMm": 900
+        }
+      ],
+      "predictedResiduals": [
+        {
+          "residualId": "R1/r1",
+          "sourceId": "R1",
+          "region": {
+            "x": 0,
+            "y": 710,
+            "width": 460,
+            "length": 690
+          },
+          "areaM2": 0.3174,
+          "eligible": true,
+          "reason": "Meets reusable-remnant policy",
+          "roundingSurplus": false
+        },
+        {
+          "residualId": "R1/r2",
+          "sourceId": "R1",
+          "region": {
+            "x": 460,
+            "y": 0,
+            "width": 340,
+            "length": 1400
+          },
+          "areaM2": 0.476,
+          "eligible": true,
+          "reason": "Meets reusable-remnant policy",
+          "roundingSurplus": false
+        },
+        {
+          "residualId": "new-roll:roll-2800/r1",
+          "sourceId": "new-roll:roll-2800",
+          "region": {
+            "x": 1200,
+            "y": 0,
+            "width": 1600,
+            "length": 900
+          },
+          "areaM2": 1.44,
+          "eligible": true,
+          "reason": "Meets reusable-remnant policy",
+          "roundingSurplus": false
+        },
+        {
+          "residualId": "new-roll:roll-2800/r2",
+          "sourceId": "new-roll:roll-2800",
+          "region": {
+            "x": 0,
+            "y": 900,
+            "width": 2800,
+            "length": 100
+          },
+          "areaM2": 0.28,
+          "eligible": false,
+          "reason": "Short side 100 mm \u003C minimum 200 mm",
+          "roundingSurplus": true
+        }
+      ],
+      "validation": {
+        "validatorVersion": "dreamglass-validator/1.2.0",
+        "passed": true,
+        "failures": []
+      }
+    },
+    {
+      "candidateId": "C-a03afd2cb127cc01",
+      "rank": 2,
+      "qualityStatus": "BoundedGap",
+      "bound": {
+        "scope": "Tier 1 only: newly purchased area (m\u00B2). Lower tiers (scrap, remnant quality, cost, cuts) are not bounded.",
+        "method": "ExactGuillotineDP",
+        "lowerBoundM2": 2.8,
+        "gapM2": 0.0,
+        "note": "Purchased area is proven minimal by exhaustive guillotine search."
+      },
+      "tags": [
+        "Least warehouse stock committed at the best purchase"
+      ],
+      "warnings": [
+        "Predicted reusable offcuts are not inventory until physically confirmed after cutting."
+      ],
+      "origin": "restart:joint:roll-2800:LengthDesc:OpenedFirst/NoPreference/BestLongSideFit/VerticalFirst",
+      "metrics": {
+        "requiredCutAreaM2": 1.4066,
+        "purchasedAreaM2": 2.8,
+        "purchaseCost": 35.000,
+        "currency": "EUR",
+        "existingStockAreaConsumedM2": 0,
+        "totalResidualAreaM2": 1.3934,
+        "reusableResidualAreaM2": 1.1134,
+        "unusableScrapAreaM2": 0.28,
+        "reusableOffcutCount": 2,
+        "reusableOffcuts": [
+          {
+            "width": 890,
+            "length": 900
+          },
+          {
+            "width": 710,
+            "length": 440
+          }
+        ],
+        "largestReusableAreaM2": 0.801,
+        "minReusableDimensionMm": 440,
+        "fragmentCount": 3,
+        "thinFragmentCount": 1,
+        "fragmentationIndex": 0.425147,
+        "consumedLengthMm": 900,
+        "orderedLengthMetres": 1,
+        "roundingSurplusMm": 100,
+        "totalCuts": 5,
+        "sourcesUsed": 1,
+        "warehouseSourcesUsed": 0,
+        "materialUtilization": 0.502357
+      },
+      "requiresPurchase": true,
+      "purchase": {
+        "rollOfferId": "roll-2800",
+        "orderedWidthMm": 2800,
+        "orderedLengthMetres": 1,
+        "consumedLengthMm": 900,
+        "paddingLengthMm": 0,
+        "lengthWithoutPaddingMm": 900,
+        "roundingSurplusMm": 100,
+        "purchasedAreaM2": 2.8,
+        "pricePerSquareMetre": 12.50,
+        "purchaseCost": 35.000,
+        "currency": "EUR",
+        "fixedLength": false
+      },
+      "sources": [
+        {
+          "sourceId": "new-roll:roll-2800",
+          "kind": "NewRoll",
+          "stockId": null,
+          "stockVersion": null,
+          "rollOfferId": "roll-2800",
+          "binReference": null,
+          "widthMm": 2800,
+          "lengthMm": 1000,
+          "patternAxis": "Length",
+          "displayRotationDegrees": 270,
+          "displayWidthMm": 1000,
+          "displayLengthMm": 2800,
+          "areaM2": 2.8
+        }
+      ],
+      "placements": [
+        {
+          "pieceInstanceId": "P1#1",
+          "pieceId": "P1",
+          "label": "P1",
+          "sourceId": "new-roll:roll-2800",
+          "footprint": {
+            "x": 0,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalRect": {
+            "x": 0,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalWidthMm": 600,
+          "nominalLengthMm": 900,
+          "cutWidthMm": 600,
+          "cutLengthMm": 900,
+          "paddingMm": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "pieceRotated": false,
+          "pieceRotationDegrees": 0,
+          "sourceDisplayRotationDegrees": 270,
+          "finishedPatternDirection": "Vertical"
+        },
+        {
+          "pieceInstanceId": "P1#2",
+          "pieceId": "P1",
+          "label": "P1",
+          "sourceId": "new-roll:roll-2800",
+          "footprint": {
+            "x": 600,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalRect": {
+            "x": 600,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalWidthMm": 600,
+          "nominalLengthMm": 900,
+          "cutWidthMm": 600,
+          "cutLengthMm": 900,
+          "paddingMm": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "pieceRotated": false,
+          "pieceRotationDegrees": 0,
+          "sourceDisplayRotationDegrees": 270,
+          "finishedPatternDirection": "Vertical"
+        },
+        {
+          "pieceInstanceId": "P2#1",
+          "pieceId": "P2",
+          "label": "P2",
+          "sourceId": "new-roll:roll-2800",
+          "footprint": {
+            "x": 1200,
+            "y": 0,
+            "width": 710,
+            "length": 460
+          },
+          "nominalRect": {
+            "x": 1205,
+            "y": 5,
+            "width": 700,
+            "length": 450
+          },
+          "nominalWidthMm": 450,
+          "nominalLengthMm": 700,
+          "cutWidthMm": 460,
+          "cutLengthMm": 710,
+          "paddingMm": {
+            "top": 5,
+            "right": 5,
+            "bottom": 5,
+            "left": 5
+          },
+          "pieceRotated": true,
+          "pieceRotationDegrees": 90,
+          "sourceDisplayRotationDegrees": 270,
+          "finishedPatternDirection": "Horizontal"
+        }
+      ],
+      "cutTrees": [
+        {
+          "sourceId": "new-roll:roll-2800",
+          "rootNodeId": "new-roll:roll-2800/n1",
+          "nodes": [
+            {
+              "nodeId": "new-roll:roll-2800/n1",
+              "kind": "Cut",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 2800,
+                "length": 1000
+              },
+              "axis": "Horizontal",
+              "positionMm": 900,
+              "firstChildId": "new-roll:roll-2800/n2",
+              "secondChildId": "new-roll:roll-2800/n11",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n2",
+              "kind": "Cut",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 2800,
+                "length": 900
+              },
+              "axis": "Vertical",
+              "positionMm": 600,
+              "firstChildId": "new-roll:roll-2800/n3",
+              "secondChildId": "new-roll:roll-2800/n4",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n3",
+              "kind": "Piece",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 600,
+                "length": 900
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": "P1#1",
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n4",
+              "kind": "Cut",
+              "region": {
+                "x": 600,
+                "y": 0,
+                "width": 2200,
+                "length": 900
+              },
+              "axis": "Vertical",
+              "positionMm": 1200,
+              "firstChildId": "new-roll:roll-2800/n5",
+              "secondChildId": "new-roll:roll-2800/n6",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n5",
+              "kind": "Piece",
+              "region": {
+                "x": 600,
+                "y": 0,
+                "width": 600,
+                "length": 900
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": "P1#2",
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n6",
+              "kind": "Cut",
+              "region": {
+                "x": 1200,
+                "y": 0,
+                "width": 1600,
+                "length": 900
+              },
+              "axis": "Vertical",
+              "positionMm": 1910,
+              "firstChildId": "new-roll:roll-2800/n7",
+              "secondChildId": "new-roll:roll-2800/n10",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n7",
+              "kind": "Cut",
+              "region": {
+                "x": 1200,
+                "y": 0,
+                "width": 710,
+                "length": 900
+              },
+              "axis": "Horizontal",
+              "positionMm": 460,
+              "firstChildId": "new-roll:roll-2800/n8",
+              "secondChildId": "new-roll:roll-2800/n9",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n8",
+              "kind": "Piece",
+              "region": {
+                "x": 1200,
+                "y": 0,
+                "width": 710,
+                "length": 460
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": "P2#1",
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n9",
+              "kind": "Residual",
+              "region": {
+                "x": 1200,
+                "y": 460,
+                "width": 710,
+                "length": 440
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": null,
+              "residualId": "new-roll:roll-2800/r1"
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n10",
+              "kind": "Residual",
+              "region": {
+                "x": 1910,
+                "y": 0,
+                "width": 890,
+                "length": 900
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": null,
+              "residualId": "new-roll:roll-2800/r2"
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n11",
+              "kind": "Residual",
+              "region": {
+                "x": 0,
+                "y": 900,
+                "width": 2800,
+                "length": 100
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": null,
+              "residualId": "new-roll:roll-2800/r3"
+            }
+          ]
+        }
+      ],
+      "cutSteps": [
+        {
+          "sequence": 1,
+          "sourceId": "new-roll:roll-2800",
+          "nodeId": "new-roll:roll-2800/n1",
+          "axis": "Horizontal",
+          "positionMm": 900,
+          "region": {
+            "x": 0,
+            "y": 0,
+            "width": 2800,
+            "length": 1000
+          },
+          "fromXMm": 0,
+          "fromYMm": 900,
+          "toXMm": 2800,
+          "toYMm": 900
+        },
+        {
+          "sequence": 2,
+          "sourceId": "new-roll:roll-2800",
+          "nodeId": "new-roll:roll-2800/n2",
+          "axis": "Vertical",
+          "positionMm": 600,
+          "region": {
+            "x": 0,
+            "y": 0,
+            "width": 2800,
+            "length": 900
+          },
+          "fromXMm": 600,
+          "fromYMm": 0,
+          "toXMm": 600,
+          "toYMm": 900
+        },
+        {
+          "sequence": 3,
+          "sourceId": "new-roll:roll-2800",
+          "nodeId": "new-roll:roll-2800/n4",
+          "axis": "Vertical",
+          "positionMm": 1200,
+          "region": {
+            "x": 600,
+            "y": 0,
+            "width": 2200,
+            "length": 900
+          },
+          "fromXMm": 1200,
+          "fromYMm": 0,
+          "toXMm": 1200,
+          "toYMm": 900
+        },
+        {
+          "sequence": 4,
+          "sourceId": "new-roll:roll-2800",
+          "nodeId": "new-roll:roll-2800/n6",
+          "axis": "Vertical",
+          "positionMm": 1910,
+          "region": {
+            "x": 1200,
+            "y": 0,
+            "width": 1600,
+            "length": 900
+          },
+          "fromXMm": 1910,
+          "fromYMm": 0,
+          "toXMm": 1910,
+          "toYMm": 900
+        },
+        {
+          "sequence": 5,
+          "sourceId": "new-roll:roll-2800",
+          "nodeId": "new-roll:roll-2800/n7",
+          "axis": "Horizontal",
+          "positionMm": 460,
+          "region": {
+            "x": 1200,
+            "y": 0,
+            "width": 710,
+            "length": 900
+          },
+          "fromXMm": 1200,
+          "fromYMm": 460,
+          "toXMm": 1910,
+          "toYMm": 460
+        }
+      ],
+      "predictedResiduals": [
+        {
+          "residualId": "new-roll:roll-2800/r1",
+          "sourceId": "new-roll:roll-2800",
+          "region": {
+            "x": 1200,
+            "y": 460,
+            "width": 710,
+            "length": 440
+          },
+          "areaM2": 0.3124,
+          "eligible": true,
+          "reason": "Meets reusable-remnant policy",
+          "roundingSurplus": false
+        },
+        {
+          "residualId": "new-roll:roll-2800/r2",
+          "sourceId": "new-roll:roll-2800",
+          "region": {
+            "x": 1910,
+            "y": 0,
+            "width": 890,
+            "length": 900
+          },
+          "areaM2": 0.801,
+          "eligible": true,
+          "reason": "Meets reusable-remnant policy",
+          "roundingSurplus": false
+        },
+        {
+          "residualId": "new-roll:roll-2800/r3",
+          "sourceId": "new-roll:roll-2800",
+          "region": {
+            "x": 0,
+            "y": 900,
+            "width": 2800,
+            "length": 100
+          },
+          "areaM2": 0.28,
+          "eligible": false,
+          "reason": "Short side 100 mm \u003C minimum 200 mm",
+          "roundingSurplus": true
+        }
+      ],
+      "validation": {
+        "validatorVersion": "dreamglass-validator/1.2.0",
+        "passed": true,
+        "failures": []
+      }
+    },
+    {
+      "candidateId": "C-a61851f0c9c8704a",
+      "rank": 3,
+      "qualityStatus": "BoundedGap",
+      "bound": {
+        "scope": "Tier 1 only: newly purchased area (m\u00B2). Lower tiers (scrap, remnant quality, cost, cuts) are not bounded.",
+        "method": "ExactGuillotineDP",
+        "lowerBoundM2": 2.8,
+        "gapM2": 0.0,
+        "note": "Purchased area is proven minimal by exhaustive guillotine search."
+      },
+      "tags": [
+        "Largest reusable remnant"
+      ],
+      "warnings": [
+        "Predicted reusable offcuts are not inventory until physically confirmed after cutting."
+      ],
+      "origin": "restart:joint:roll-2800:Random:RemnantsFirst/LargestFirst/BestAreaFit/ShorterLeftoverAxis/rows",
+      "metrics": {
+        "requiredCutAreaM2": 1.4066,
+        "purchasedAreaM2": 2.8,
+        "purchaseCost": 35.000,
+        "currency": "EUR",
+        "existingStockAreaConsumedM2": 1.12,
+        "totalResidualAreaM2": 2.5134,
+        "reusableResidualAreaM2": 2.168,
+        "unusableScrapAreaM2": 0.3454,
+        "reusableOffcutCount": 2,
+        "reusableOffcuts": [
+          {
+            "width": 2200,
+            "length": 900
+          },
+          {
+            "width": 200,
+            "length": 940
+          }
+        ],
+        "largestReusableAreaM2": 1.98,
+        "minReusableDimensionMm": 200,
+        "fragmentCount": 5,
+        "thinFragmentCount": 3,
+        "fragmentationIndex": 0.212222,
+        "consumedLengthMm": 900,
+        "orderedLengthMetres": 1,
+        "roundingSurplusMm": 100,
+        "totalCuts": 6,
+        "sourcesUsed": 2,
+        "warehouseSourcesUsed": 1,
+        "materialUtilization": 0.358827
+      },
+      "requiresPurchase": true,
+      "purchase": {
+        "rollOfferId": "roll-2800",
+        "orderedWidthMm": 2800,
+        "orderedLengthMetres": 1,
+        "consumedLengthMm": 900,
+        "paddingLengthMm": 0,
+        "lengthWithoutPaddingMm": 900,
+        "roundingSurplusMm": 100,
+        "purchasedAreaM2": 2.8,
+        "pricePerSquareMetre": 12.50,
+        "purchaseCost": 35.000,
+        "currency": "EUR",
+        "fixedLength": false
+      },
+      "sources": [
+        {
+          "sourceId": "R1",
+          "kind": "WarehouseRemnant",
+          "stockId": "R1",
+          "stockVersion": 4,
+          "rollOfferId": null,
+          "binReference": null,
+          "widthMm": 800,
+          "lengthMm": 1400,
+          "patternAxis": "Length",
+          "displayRotationDegrees": 270,
+          "displayWidthMm": 1400,
+          "displayLengthMm": 800,
+          "areaM2": 1.12
+        },
+        {
+          "sourceId": "new-roll:roll-2800",
+          "kind": "NewRoll",
+          "stockId": null,
+          "stockVersion": null,
+          "rollOfferId": "roll-2800",
+          "binReference": null,
+          "widthMm": 2800,
+          "lengthMm": 1000,
+          "patternAxis": "Length",
+          "displayRotationDegrees": 270,
+          "displayWidthMm": 1000,
+          "displayLengthMm": 2800,
+          "areaM2": 2.8
+        }
+      ],
+      "placements": [
+        {
+          "pieceInstanceId": "P2#1",
+          "pieceId": "P2",
+          "label": "P2",
+          "sourceId": "R1",
+          "footprint": {
+            "x": 0,
+            "y": 0,
+            "width": 710,
+            "length": 460
+          },
+          "nominalRect": {
+            "x": 5,
+            "y": 5,
+            "width": 700,
+            "length": 450
+          },
+          "nominalWidthMm": 450,
+          "nominalLengthMm": 700,
+          "cutWidthMm": 460,
+          "cutLengthMm": 710,
+          "paddingMm": {
+            "top": 5,
+            "right": 5,
+            "bottom": 5,
+            "left": 5
+          },
+          "pieceRotated": true,
+          "pieceRotationDegrees": 90,
+          "sourceDisplayRotationDegrees": 270,
+          "finishedPatternDirection": "Horizontal"
+        },
+        {
+          "pieceInstanceId": "P1#1",
+          "pieceId": "P1",
+          "label": "P1",
+          "sourceId": "R1",
+          "footprint": {
+            "x": 0,
+            "y": 460,
+            "width": 600,
+            "length": 900
+          },
+          "nominalRect": {
+            "x": 0,
+            "y": 460,
+            "width": 600,
+            "length": 900
+          },
+          "nominalWidthMm": 600,
+          "nominalLengthMm": 900,
+          "cutWidthMm": 600,
+          "cutLengthMm": 900,
+          "paddingMm": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "pieceRotated": false,
+          "pieceRotationDegrees": 0,
+          "sourceDisplayRotationDegrees": 270,
+          "finishedPatternDirection": "Vertical"
+        },
+        {
+          "pieceInstanceId": "P1#2",
+          "pieceId": "P1",
+          "label": "P1",
+          "sourceId": "new-roll:roll-2800",
+          "footprint": {
+            "x": 0,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalRect": {
+            "x": 0,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalWidthMm": 600,
+          "nominalLengthMm": 900,
+          "cutWidthMm": 600,
+          "cutLengthMm": 900,
+          "paddingMm": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "pieceRotated": false,
+          "pieceRotationDegrees": 0,
+          "sourceDisplayRotationDegrees": 270,
+          "finishedPatternDirection": "Vertical"
+        }
+      ],
+      "cutTrees": [
+        {
+          "sourceId": "R1",
+          "rootNodeId": "R1/n1",
+          "nodes": [
+            {
+              "nodeId": "R1/n1",
+              "kind": "Cut",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 800,
+                "length": 1400
+              },
+              "axis": "Horizontal",
+              "positionMm": 460,
+              "firstChildId": "R1/n2",
+              "secondChildId": "R1/n5",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "R1/n2",
+              "kind": "Cut",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 800,
+                "length": 460
+              },
+              "axis": "Vertical",
+              "positionMm": 710,
+              "firstChildId": "R1/n3",
+              "secondChildId": "R1/n4",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "R1/n3",
+              "kind": "Piece",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 710,
+                "length": 460
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": "P2#1",
+              "residualId": null
+            },
+            {
+              "nodeId": "R1/n4",
+              "kind": "Residual",
+              "region": {
+                "x": 710,
+                "y": 0,
+                "width": 90,
+                "length": 460
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": null,
+              "residualId": "R1/r1"
+            },
+            {
+              "nodeId": "R1/n5",
+              "kind": "Cut",
+              "region": {
+                "x": 0,
+                "y": 460,
+                "width": 800,
+                "length": 940
+              },
+              "axis": "Vertical",
+              "positionMm": 600,
+              "firstChildId": "R1/n6",
+              "secondChildId": "R1/n9",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "R1/n6",
+              "kind": "Cut",
+              "region": {
+                "x": 0,
+                "y": 460,
+                "width": 600,
+                "length": 940
+              },
+              "axis": "Horizontal",
+              "positionMm": 1360,
+              "firstChildId": "R1/n7",
+              "secondChildId": "R1/n8",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "R1/n7",
+              "kind": "Piece",
+              "region": {
+                "x": 0,
+                "y": 460,
+                "width": 600,
+                "length": 900
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": "P1#1",
+              "residualId": null
+            },
+            {
+              "nodeId": "R1/n8",
+              "kind": "Residual",
+              "region": {
+                "x": 0,
+                "y": 1360,
+                "width": 600,
+                "length": 40
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": null,
+              "residualId": "R1/r2"
+            },
+            {
+              "nodeId": "R1/n9",
+              "kind": "Residual",
+              "region": {
+                "x": 600,
+                "y": 460,
+                "width": 200,
+                "length": 940
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": null,
+              "residualId": "R1/r3"
+            }
+          ]
+        },
+        {
+          "sourceId": "new-roll:roll-2800",
+          "rootNodeId": "new-roll:roll-2800/n1",
+          "nodes": [
+            {
+              "nodeId": "new-roll:roll-2800/n1",
+              "kind": "Cut",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 2800,
+                "length": 1000
+              },
+              "axis": "Horizontal",
+              "positionMm": 900,
+              "firstChildId": "new-roll:roll-2800/n2",
+              "secondChildId": "new-roll:roll-2800/n5",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n2",
+              "kind": "Cut",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 2800,
+                "length": 900
+              },
+              "axis": "Vertical",
+              "positionMm": 600,
+              "firstChildId": "new-roll:roll-2800/n3",
+              "secondChildId": "new-roll:roll-2800/n4",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n3",
+              "kind": "Piece",
+              "region": {
+                "x": 0,
+                "y": 0,
+                "width": 600,
+                "length": 900
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": "P1#2",
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n4",
+              "kind": "Residual",
+              "region": {
+                "x": 600,
+                "y": 0,
+                "width": 2200,
+                "length": 900
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": null,
+              "residualId": "new-roll:roll-2800/r1"
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n5",
+              "kind": "Residual",
+              "region": {
+                "x": 0,
+                "y": 900,
+                "width": 2800,
+                "length": 100
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": null,
+              "residualId": "new-roll:roll-2800/r2"
+            }
+          ]
+        }
+      ],
+      "cutSteps": [
+        {
+          "sequence": 1,
+          "sourceId": "R1",
+          "nodeId": "R1/n1",
+          "axis": "Horizontal",
+          "positionMm": 460,
+          "region": {
+            "x": 0,
+            "y": 0,
+            "width": 800,
+            "length": 1400
+          },
+          "fromXMm": 0,
+          "fromYMm": 460,
+          "toXMm": 800,
+          "toYMm": 460
+        },
+        {
+          "sequence": 2,
+          "sourceId": "R1",
+          "nodeId": "R1/n2",
+          "axis": "Vertical",
+          "positionMm": 710,
+          "region": {
+            "x": 0,
+            "y": 0,
+            "width": 800,
+            "length": 460
+          },
+          "fromXMm": 710,
+          "fromYMm": 0,
+          "toXMm": 710,
+          "toYMm": 460
+        },
+        {
+          "sequence": 3,
+          "sourceId": "R1",
+          "nodeId": "R1/n5",
+          "axis": "Vertical",
+          "positionMm": 600,
+          "region": {
+            "x": 0,
+            "y": 460,
+            "width": 800,
+            "length": 940
+          },
+          "fromXMm": 600,
+          "fromYMm": 460,
+          "toXMm": 600,
+          "toYMm": 1400
+        },
+        {
+          "sequence": 4,
+          "sourceId": "R1",
+          "nodeId": "R1/n6",
+          "axis": "Horizontal",
+          "positionMm": 1360,
+          "region": {
+            "x": 0,
+            "y": 460,
+            "width": 600,
+            "length": 940
+          },
+          "fromXMm": 0,
+          "fromYMm": 1360,
+          "toXMm": 600,
+          "toYMm": 1360
+        },
+        {
+          "sequence": 5,
+          "sourceId": "new-roll:roll-2800",
+          "nodeId": "new-roll:roll-2800/n1",
+          "axis": "Horizontal",
+          "positionMm": 900,
+          "region": {
+            "x": 0,
+            "y": 0,
+            "width": 2800,
+            "length": 1000
+          },
+          "fromXMm": 0,
+          "fromYMm": 900,
+          "toXMm": 2800,
+          "toYMm": 900
+        },
+        {
+          "sequence": 6,
+          "sourceId": "new-roll:roll-2800",
+          "nodeId": "new-roll:roll-2800/n2",
+          "axis": "Vertical",
+          "positionMm": 600,
+          "region": {
+            "x": 0,
+            "y": 0,
+            "width": 2800,
+            "length": 900
+          },
+          "fromXMm": 600,
+          "fromYMm": 0,
+          "toXMm": 600,
+          "toYMm": 900
+        }
+      ],
+      "predictedResiduals": [
+        {
+          "residualId": "R1/r1",
+          "sourceId": "R1",
+          "region": {
+            "x": 710,
+            "y": 0,
+            "width": 90,
+            "length": 460
+          },
+          "areaM2": 0.0414,
+          "eligible": false,
+          "reason": "Short side 90 mm \u003C minimum 200 mm",
+          "roundingSurplus": false
+        },
+        {
+          "residualId": "R1/r2",
+          "sourceId": "R1",
+          "region": {
+            "x": 0,
+            "y": 1360,
+            "width": 600,
+            "length": 40
+          },
+          "areaM2": 0.024,
+          "eligible": false,
+          "reason": "Short side 40 mm \u003C minimum 200 mm",
+          "roundingSurplus": false
+        },
+        {
+          "residualId": "R1/r3",
+          "sourceId": "R1",
+          "region": {
+            "x": 600,
+            "y": 460,
+            "width": 200,
+            "length": 940
+          },
+          "areaM2": 0.188,
+          "eligible": true,
+          "reason": "Meets reusable-remnant policy",
+          "roundingSurplus": false
+        },
+        {
+          "residualId": "new-roll:roll-2800/r1",
+          "sourceId": "new-roll:roll-2800",
+          "region": {
+            "x": 600,
+            "y": 0,
+            "width": 2200,
+            "length": 900
+          },
+          "areaM2": 1.98,
+          "eligible": true,
+          "reason": "Meets reusable-remnant policy",
+          "roundingSurplus": false
+        },
+        {
+          "residualId": "new-roll:roll-2800/r2",
+          "sourceId": "new-roll:roll-2800",
+          "region": {
+            "x": 0,
+            "y": 900,
+            "width": 2800,
+            "length": 100
+          },
+          "areaM2": 0.28,
+          "eligible": false,
+          "reason": "Short side 100 mm \u003C minimum 200 mm",
+          "roundingSurplus": true
+        }
+      ],
+      "validation": {
+        "validatorVersion": "dreamglass-validator/1.2.0",
+        "passed": true,
+        "failures": []
+      }
+    }
+  ]
+}

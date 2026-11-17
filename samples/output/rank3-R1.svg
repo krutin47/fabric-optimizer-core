@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="612.29" viewBox="0 0 960 612.29" font-family="Helvetica, Arial, sans-serif">
+<defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#9a9a9a" stroke-width="2"/></pattern></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="30" y="26" font-size="17" font-weight="bold">FROM WAREHOUSE: R1 v4 · 1,400 long × 800 mm high</text>
+<rect x="30" y="46" width="900" height="514.29" fill="#f7f3ea" stroke="#222" stroke-width="1.5"/>
+<g stroke="#e2d9c4" stroke-width="1"><line x1="30" y1="63.14" x2="930" y2="63.14"/><line x1="30" y1="80.29" x2="930" y2="80.29"/><line x1="30" y1="97.43" x2="930" y2="97.43"/><line x1="30" y1="114.57" x2="930" y2="114.57"/><line x1="30" y1="131.71" x2="930" y2="131.71"/><line x1="30" y1="148.86" x2="930" y2="148.86"/><line x1="30" y1="166" x2="930" y2="166"/><line x1="30" y1="183.14" x2="930" y2="183.14"/><line x1="30" y1="200.29" x2="930" y2="200.29"/><line x1="30" y1="217.43" x2="930" y2="217.43"/><line x1="30" y1="234.57" x2="930" y2="234.57"/><line x1="30" y1="251.71" x2="930" y2="251.71"/><line x1="30" y1="268.86" x2="930" y2="268.86"/><line x1="30" y1="286" x2="930" y2="286"/><line x1="30" y1="303.14" x2="930" y2="303.14"/><line x1="30" y1="320.29" x2="930" y2="320.29"/><line x1="30" y1="337.43" x2="930" y2="337.43"/><line x1="30" y1="354.57" x2="930" y2="354.57"/><line x1="30" y1="371.71" x2="930" y2="371.71"/><line x1="30" y1="388.86" x2="930" y2="388.86"/><line x1="30" y1="406" x2="930" y2="406"/><line x1="30" y1="423.14" x2="930" y2="423.14"/><line x1="30" y1="440.29" x2="930" y2="440.29"/><line x1="30" y1="457.43" x2="930" y2="457.43"/><line x1="30" y1="474.57" x2="930" y2="474.57"/><line x1="30" y1="491.71" x2="930" y2="491.71"/><line x1="30" y1="508.86" x2="930" y2="508.86"/><line x1="30" y1="526" x2="930" y2="526"/><line x1="30" y1="543.14" x2="930" y2="543.14"/></g>
+<rect x="30" y="46" width="295.71" height="57.86" fill="url(#hatch)" fill-opacity="0.85" stroke="#7a7a7a" stroke-width="0.8"/>
+<text x="177.86" y="78.75" font-size="10.93" text-anchor="middle" fill="#3c5a35">scrap 460×90</text>
+<rect x="904.29" y="174.57" width="25.71" height="385.71" fill="url(#hatch)" fill-opacity="0.85" stroke="#7a7a7a" stroke-width="0.8"/>
+<text x="917.14" y="371.25" font-size="10.93" text-anchor="middle" fill="#3c5a35" transform="rotate(-90 917.14 367.43)">scrap 40×600</text>
+<rect x="325.71" y="46" width="604.29" height="128.57" fill="#d8f0d2" fill-opacity="0.85" stroke="#7a7a7a" stroke-width="0.8"/>
+<text x="627.86" y="114.11" font-size="10.93" text-anchor="middle" fill="#3c5a35">reusable 940×200</text>
+<rect x="30" y="103.86" width="295.71" height="456.43" fill="#cfe2f7" fill-opacity="0.9" stroke="#1f4e79" stroke-width="1"/>
+<rect x="33.21" y="107.07" width="289.29" height="450" fill="none" stroke="#1f4e79" stroke-dasharray="4 3" stroke-width="0.8"/>
+<text x="177.86" y="123.37" font-size="9.26" text-anchor="middle" fill="#1f4e79">460</text>
+<text x="47.2" y="332.07" font-size="9.26" text-anchor="middle" fill="#1f4e79" transform="rotate(-90 47.2 332.07)">710</text>
+<text x="177.86" y="317.21" font-size="12.86" font-weight="bold" text-anchor="middle">P2#1</text>
+<text x="177.86" y="331.44" font-size="10.93" font-weight="bold" text-anchor="middle">Cut-out 460 × 710 mm</text>
+<text x="177.86" y="344.01" font-size="9.77" text-anchor="middle">finished 450 × 700 · pad 5</text>
+<text x="177.86" y="356.22" font-size="9.77" text-anchor="middle">grain ↔</text>
+<rect x="325.71" y="174.57" width="578.57" height="385.71" fill="#cfe2f7" fill-opacity="0.9" stroke="#1f4e79" stroke-width="1"/>
+<text x="615" y="194.08" font-size="9.26" text-anchor="middle" fill="#1f4e79">900</text>
+<text x="342.91" y="367.43" font-size="9.26" text-anchor="middle" fill="#1f4e79" transform="rotate(-90 342.91 367.43)">600</text>
+<text x="615" y="358.67" font-size="12.86" font-weight="bold" text-anchor="middle">P1#1</text>
+<text x="615" y="372.91" font-size="10.93" font-weight="bold" text-anchor="middle">600 × 900 mm</text>
+<text x="615" y="385.47" font-size="9.77" text-anchor="middle">turned 90° · grain ↕</text>
+<line x1="325.71" y1="560.29" x2="325.71" y2="46" stroke="#c0392b" stroke-width="1.4"/>
+<circle cx="325.71" cy="431.71" r="9.64" fill="#c0392b"/><text x="325.71" y="435.57" font-size="9.64" text-anchor="middle" fill="#fff">1</text>
+<line x1="30" y1="103.86" x2="325.71" y2="103.86" stroke="#c0392b" stroke-width="1.4"/>
+<circle cx="103.93" cy="103.86" r="9.64" fill="#c0392b"/><text x="103.93" y="107.71" font-size="9.64" text-anchor="middle" fill="#fff">2</text>
+<line x1="325.71" y1="174.57" x2="930" y2="174.57" stroke="#c0392b" stroke-width="1.4"/>
+<circle cx="476.79" cy="174.57" r="9.64" fill="#c0392b"/><text x="476.79" y="178.43" font-size="9.64" text-anchor="middle" fill="#fff">3</text>
+<line x1="904.29" y1="560.29" x2="904.29" y2="174.57" stroke="#c0392b" stroke-width="1.4"/>
+<circle cx="904.29" cy="463.86" r="9.64" fill="#c0392b"/><text x="904.29" y="467.71" font-size="9.64" text-anchor="middle" fill="#fff">4</text>
+<text x="30" y="580.29" font-size="11" fill="#555">Cut in numbered order, each cut edge to edge (red) · blue = cut-out, dashed = finished size · green = reusable leftover · hatched = scrap · sizes in mm</text>
+<text x="30" y="595.29" font-size="9" fill="#888">Plan C-a61851f0c9c8704a</text>
+</svg>

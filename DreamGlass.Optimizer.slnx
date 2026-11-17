@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DreamGlass.Optimizer.Cli/DreamGlass.Optimizer.Cli.csproj" />
+    <Project Path="src/DreamGlass.Optimizer.Playground/DreamGlass.Optimizer.Playground.csproj" />
+    <Project Path="src/DreamGlass.Optimizer/DreamGlass.Optimizer.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DreamGlass.Optimizer.Tests/DreamGlass.Optimizer.Tests.csproj" />
+  </Folder>
+</Solution>

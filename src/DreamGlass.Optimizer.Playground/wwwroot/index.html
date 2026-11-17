@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DreamGlass Optimizer Playground</title>
+  <link rel="stylesheet" href="app.css?v=1.3.3">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>DreamGlass Optimizer <span class="muted">Playground</span></h1>
+      <p class="muted small" id="versions">Loading solver info…</p>
+    </div>
+    <p class="muted small note">Local test page: no login, nothing is saved. Hover or tap any <span class="tipped">underlined label</span> for an explanation.</p>
+  </header>
+
+  <main class="app">
+    <section class="panel inputs" aria-label="Job input">
+      <div class="panel-head">
+        <h2>Job</h2>
+        <div class="seg" role="tablist">
+          <button type="button" class="seg-btn active" data-mode="form">Form</button>
+          <button type="button" class="seg-btn" data-mode="json">JSON</button>
+        </div>
+      </div>
+
+      <label class="field">
+        <span id="preset-label">Example job</span>
+        <select id="preset"></select>
+      </label>
+      <p class="preset-note" id="preset-note"></p>
+
+      <div id="form-view"></div>
+
+      <div id="json-view" hidden>
+        <textarea id="json-text" spellcheck="false" aria-label="Job JSON"></textarea>
+        <div class="row">
+          <button type="button" class="btn" id="json-apply">Apply JSON</button>
+          <span class="error small" id="json-error"></span>
+        </div>
+      </div>
+
+      <div id="form-issues" class="form-issues" hidden></div>
+
+      <div class="run-bar">
+        <button type="button" class="btn primary" id="run">Optimize</button>
+        <button type="button" class="btn" id="cancel" hidden>Cancel</button>
+        <span class="muted small" id="run-hint">Runs the real optimiser and its independent checker on the server.</span>
+      </div>
+    </section>
+
+    <section class="panel results" aria-label="Results" id="results">
+      <div class="empty">
+        <h2>Results</h2>
+        <p class="muted">Pick an example job (or edit the form) and press <b>Optimize</b>. You'll see how much fabric to
+          order, which warehouse pieces to use, and a cutting sheet for each roll or remnant.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js?v=1.3.3"></script>
+</body>
+</html>
