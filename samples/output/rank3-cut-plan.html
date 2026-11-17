@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cut plan &#183; job revision revision-id &#183; plan #3</title>
+<style>:root { color-scheme: light; }
+body { font: 15px/1.45 Helvetica, Arial, sans-serif; color: #111; margin: 24px auto; max-width: 1100px; padding: 0 16px; background: #fff; }
+h1 { font-size: 24px; margin: 0 0 4px; }
+h2 { font-size: 19px; margin: 28px 0 8px; border-bottom: 2px solid #111; padding-bottom: 3px; }
+h3 { font-size: 16px; margin: 18px 0 6px; }
+.meta, .note { color: #333; }
+.note { font-size: 13px; }
+.quality { border-left: 4px solid #111; padding: 4px 10px; background: #f3f3f3; }
+.big { font-size: 18px; font-weight: bold; }
+table { border-collapse: collapse; width: 100%; margin: 6px 0 10px; font-size: 14px; }
+th, td { border: 1px solid #555; padding: 4px 6px; text-align: left; vertical-align: top; }
+thead th { background: #e8e8e8; }
+tbody th { font-weight: bold; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.ledger { width: auto; min-width: 60%; }
+figure.drawing { margin: 10px 0; }
+figure.drawing svg { max-width: 100%; height: auto; border: 1px solid #ccc; }
+figcaption { font-size: 13px; color: #333; margin-top: 4px; }
+footer { margin-top: 32px; font-size: 12px; color: #333; border-top: 1px solid #999; padding-top: 6px; }
+@page { margin: 12mm; }
+@media print {
+  body { margin: 0; max-width: none; font-size: 12px; }
+  section.source { break-before: page; }
+  thead { display: table-header-group; }
+  tr, figure { break-inside: avoid; }
+  .quality { background: none; }
+  thead th { background: none; border-bottom: 2px solid #000; }
+}</style>
+</head>
+<body>
+<header>
+<h1>Cut plan &#183; job revision revision-id &#183; plan #3</h1>
+<p class="meta">Job revision revision-id &#183; material material-id &#183; printed 2026-11-17 17:18 UTC</p>
+<p class="quality">The price is proven to be the lowest possible for this job (exhaustive search). Scrap, leftovers and cuts are the best found, not proven.</p>
+</header>
+<main>
+<section aria-labelledby="order-h">
+<h2 id="order-h">What to order</h2>
+<table>
+<thead><tr><th scope="col">Roll</th><th scope="col">Height (fixed width of the roll)</th><th scope="col">Order</th><th scope="col">Price per m²</th><th scope="col">Cost</th></tr></thead>
+<tbody><tr><td>roll-2800</td><td>2,800 mm</td><td><strong>1 m</strong> (whole metres)</td><td>12.50 EUR</td><td>35.00 EUR <span class="note">(half-up to 2 decimals)</span></td></tr></tbody>
+</table>
+<p>Layout needs 900 mm → rounded up to whole metres. The 100 mm left over is scrap: too small to keep (short side 100 mm &lt; minimum 200 mm).</p>
+</section>
+<section aria-labelledby="stock-h">
+<h2 id="stock-h">Warehouse pieces to take</h2>
+<table>
+<thead><tr><th scope="col">Piece</th><th scope="col">Version</th><th scope="col">Bin</th><th scope="col">Length × height</th><th scope="col">Keepable leftover after cutting</th></tr></thead>
+<tbody>
+<tr><th scope="row">R1</th><td>4</td><td>–</td><td>1,400 × 800 mm</td><td>0.188 m²</td></tr>
+</tbody>
+</table>
+<p class="note">Reserve these pieces before cutting. If one is no longer available, re-run the optimisation; do not swap in another piece.</p>
+</section>
+<section aria-labelledby="ledger-h">
+<h2 id="ledger-h">Material summary</h2>
+<table class="ledger">
+<thead><tr><th scope="col">Figure</th><th scope="col" class="num">Value</th></tr></thead>
+<tbody>
+<tr><th scope="row">Pieces to cut (with padding)</th><td class="num">1.4066 m²</td></tr>
+<tr><th scope="row">New fabric ordered</th><td class="num">2.8 m²</td></tr>
+<tr><th scope="row">of which the layout uses</th><td class="num">2.52 m²</td></tr>
+<tr><th scope="row">of which is left over from rounding up to whole metres</th><td class="num">0.28 m²</td></tr>
+<tr><th scope="row">Warehouse pieces cut into (whole pieces)</th><td class="num">1.12 m²</td></tr>
+<tr><th scope="row">Warehouse stock left untouched</th><td class="num">0 m²</td></tr>
+<tr><th scope="row">Leftovers big enough to keep</th><td class="num">2.168 m² (2)</td></tr>
+<tr><th scope="row">Largest keepable leftover</th><td class="num">1.98 m²</td></tr>
+<tr><th scope="row">Scrap (too small to keep)</th><td class="num">0.3454 m²</td></tr>
+<tr><th scope="row">Purchase cost</th><td class="num">35.00 EUR</td></tr>
+<tr><th scope="row">Cuts</th><td class="num">6</td></tr>
+<tr><th scope="row">Sources cut</th><td class="num">2</td></tr>
+</tbody>
+</table>
+<p class="note">Leftovers are predictions. They become warehouse stock only after they are cut, measured and confirmed.</p>
+</section>
+<section class="source" aria-labelledby="src-1">
+<h2 id="src-1">Sheet 1 of 2: Warehouse piece R1 (version 4)</h2>
+<p>1,400 mm long × 800 mm high, drawn with its length left to right from the start of the roll. The pattern runs ↔ left to right on this sheet. All positions below are in mm from the sheet's top-left corner as drawn.</p>
+<figure class="drawing"><svg xmlns="http://www.w3.org/2000/svg" width="960" height="645.29" viewBox="0 0 960 645.29" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="Cutting sheet for warehouse piece R1, 1,400 mm long and 800 mm high: 2 pieces and 4 numbered cuts. The pieces, cuts and leftovers are also listed as tables with this drawing." data-drawing="723ef7ddcc">
+<title>Cutting sheet for warehouse piece R1, 1,400 mm long and 800 mm high: 2 pieces and 4 numbered cuts. The pieces, cuts and leftovers are also listed as tables with this drawing.</title>
+<defs><pattern id="hatch-723ef7ddcc" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#8a8a8a" stroke-width="2"/></pattern></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="30" y="26" font-size="17" font-weight="bold">FROM WAREHOUSE: R1 v4 · 1,400 long × 800 mm high</text>
+<rect x="30" y="46" width="900" height="514.29" fill="#f7f3ea" stroke="#222" stroke-width="1.5"/>
+<g stroke="#e2d9c4" stroke-width="1"><line x1="30" y1="63.14" x2="930" y2="63.14"/><line x1="30" y1="80.29" x2="930" y2="80.29"/><line x1="30" y1="97.43" x2="930" y2="97.43"/><line x1="30" y1="114.57" x2="930" y2="114.57"/><line x1="30" y1="131.71" x2="930" y2="131.71"/><line x1="30" y1="148.86" x2="930" y2="148.86"/><line x1="30" y1="166" x2="930" y2="166"/><line x1="30" y1="183.14" x2="930" y2="183.14"/><line x1="30" y1="200.29" x2="930" y2="200.29"/><line x1="30" y1="217.43" x2="930" y2="217.43"/><line x1="30" y1="234.57" x2="930" y2="234.57"/><line x1="30" y1="251.71" x2="930" y2="251.71"/><line x1="30" y1="268.86" x2="930" y2="268.86"/><line x1="30" y1="286" x2="930" y2="286"/><line x1="30" y1="303.14" x2="930" y2="303.14"/><line x1="30" y1="320.29" x2="930" y2="320.29"/><line x1="30" y1="337.43" x2="930" y2="337.43"/><line x1="30" y1="354.57" x2="930" y2="354.57"/><line x1="30" y1="371.71" x2="930" y2="371.71"/><line x1="30" y1="388.86" x2="930" y2="388.86"/><line x1="30" y1="406" x2="930" y2="406"/><line x1="30" y1="423.14" x2="930" y2="423.14"/><line x1="30" y1="440.29" x2="930" y2="440.29"/><line x1="30" y1="457.43" x2="930" y2="457.43"/><line x1="30" y1="474.57" x2="930" y2="474.57"/><line x1="30" y1="491.71" x2="930" y2="491.71"/><line x1="30" y1="508.86" x2="930" y2="508.86"/><line x1="30" y1="526" x2="930" y2="526"/><line x1="30" y1="543.14" x2="930" y2="543.14"/></g>
+<rect data-leftover="R1/r1" x="30" y="46" width="295.71" height="57.86" fill="url(#hatch-723ef7ddcc)" fill-opacity="0.85" stroke="#6a6a6a" stroke-width="0.8"/>
+<text x="177.86" y="78.75" font-size="10.93" text-anchor="middle" fill="#3c5a35">scrap 460×90</text>
+<rect data-leftover="R1/r2" x="904.29" y="174.57" width="25.71" height="385.71" fill="url(#hatch-723ef7ddcc)" fill-opacity="0.85" stroke="#6a6a6a" stroke-width="0.8"/>
+<text x="917.14" y="371.25" font-size="10.93" text-anchor="middle" fill="#3c5a35" transform="rotate(-90 917.14 367.43)">scrap 40×600</text>
+<rect data-leftover="R1/r3" x="325.71" y="46" width="604.29" height="128.57" fill="#d8f0d2" fill-opacity="0.85" stroke="#6a6a6a" stroke-width="0.8"/>
+<text x="627.86" y="114.11" font-size="10.93" text-anchor="middle" fill="#3c5a35">reusable 940×200</text>
+<rect data-piece="P2#1" x="30" y="103.86" width="295.71" height="456.43" fill="#cfe2f7" fill-opacity="0.9" stroke="#1f4e79" stroke-width="1"/>
+<rect x="33.21" y="107.07" width="289.29" height="450" fill="none" stroke="#1f4e79" stroke-dasharray="4 3" stroke-width="0.8"/>
+<text x="177.86" y="123.37" font-size="9.26" text-anchor="middle" fill="#1f4e79">460</text>
+<text x="47.2" y="332.07" font-size="9.26" text-anchor="middle" fill="#1f4e79" transform="rotate(-90 47.2 332.07)">710</text>
+<text x="177.86" y="317.21" font-size="12.86" font-weight="bold" text-anchor="middle">P2#1</text>
+<text x="177.86" y="331.44" font-size="10.93" font-weight="bold" text-anchor="middle">Cut-out 460 × 710 mm</text>
+<text x="177.86" y="344.01" font-size="9.77" text-anchor="middle">finished 450 × 700 · pad 5</text>
+<text x="177.86" y="356.22" font-size="9.77" text-anchor="middle">grain ↔</text>
+<rect data-piece="P1#1" x="325.71" y="174.57" width="578.57" height="385.71" fill="#cfe2f7" fill-opacity="0.9" stroke="#1f4e79" stroke-width="1"/>
+<text x="615" y="194.08" font-size="9.26" text-anchor="middle" fill="#1f4e79">900</text>
+<text x="342.91" y="367.43" font-size="9.26" text-anchor="middle" fill="#1f4e79" transform="rotate(-90 342.91 367.43)">600</text>
+<text x="615" y="358.67" font-size="12.86" font-weight="bold" text-anchor="middle">P1#1</text>
+<text x="615" y="372.91" font-size="10.93" font-weight="bold" text-anchor="middle">600 × 900 mm</text>
+<text x="615" y="385.47" font-size="9.77" text-anchor="middle">turned 90° · grain ↕</text>
+<g data-cut="1"><line x1="325.71" y1="560.29" x2="325.71" y2="46" stroke="#b02a1d" stroke-width="1.4"/><circle cx="325.71" cy="431.71" r="9.64" fill="#b02a1d"/><text x="325.71" y="435.57" font-size="9.64" text-anchor="middle" fill="#fff">1</text></g>
+<g data-cut="2"><line x1="30" y1="103.86" x2="325.71" y2="103.86" stroke="#b02a1d" stroke-width="1.4"/><circle cx="103.93" cy="103.86" r="9.64" fill="#b02a1d"/><text x="103.93" y="107.71" font-size="9.64" text-anchor="middle" fill="#fff">2</text></g>
+<g data-cut="3"><line x1="325.71" y1="174.57" x2="930" y2="174.57" stroke="#b02a1d" stroke-width="1.4"/><circle cx="476.79" cy="174.57" r="9.64" fill="#b02a1d"/><text x="476.79" y="178.43" font-size="9.64" text-anchor="middle" fill="#fff">3</text></g>
+<g data-cut="4"><line x1="904.29" y1="560.29" x2="904.29" y2="174.57" stroke="#b02a1d" stroke-width="1.4"/><circle cx="904.29" cy="463.86" r="9.64" fill="#b02a1d"/><text x="904.29" y="467.71" font-size="9.64" text-anchor="middle" fill="#fff">4</text></g>
+<text x="30" y="580.29" font-size="11" fill="#444">Cut in numbered order, each cut edge to edge (red) · blue = cut-out, dashed = finished size · green = reusable leftover · hatched = scrap · sizes in mm</text>
+<g stroke="#222" stroke-width="1.4"><line x1="30" y1="594.29" x2="94.29" y2="594.29"/><line x1="30" y1="590.29" x2="30" y2="598.29"/><line x1="94.29" y1="590.29" x2="94.29" y2="598.29"/></g><text x="102.29" y="598.29" font-size="11" fill="#444">= 100 mm · proportional drawing, not actual size: cut by the printed sizes · pattern runs ↔ left to right on this sheet</text>
+<text x="30" y="613.29" font-size="10" fill="#444">Job revision revision-id · material material-id · printed 2026-11-17 17:18 UTC</text>
+<text x="30" y="628.29" font-size="9" fill="#666">Plan C-a61851f0c9c8704a · DreamGlass 1.4.0 · solver dreamglass-hybrid/1.4.0 · checker dreamglass-validator/1.3.0</text>
+</svg>
+<figcaption>Drawing of sheet 1. Proportional, not actual size: cut by the sizes in the tables.</figcaption></figure>
+<h3>Cut steps</h3>
+<table>
+<thead><tr><th scope="col">Step</th><th scope="col">Direction</th><th scope="col">Position</th><th scope="col">Runs from – to</th><th scope="col" class="num">Length</th></tr></thead>
+<tbody>
+<tr data-cut="1"><th scope="row">1</th><td>Top to bottom</td><td>460 from the left</td><td>0 – 800 from the top</td><td class="num">800</td></tr>
+<tr data-cut="2"><th scope="row">2</th><td>Left to right</td><td>90 from the top</td><td>0 – 460 from the left</td><td class="num">460</td></tr>
+<tr data-cut="3"><th scope="row">3</th><td>Left to right</td><td>200 from the top</td><td>460 – 1,400 from the left</td><td class="num">940</td></tr>
+<tr data-cut="4"><th scope="row">4</th><td>Top to bottom</td><td>1,360 from the left</td><td>200 – 800 from the top</td><td class="num">600</td></tr>
+</tbody>
+</table>
+<p class="note">Make the cuts in this order. Each cut runs from edge to edge of the piece it divides.</p>
+<h3>Pieces</h3>
+<table>
+<thead><tr><th scope="col">Piece</th><th scope="col">Label</th><th scope="col">Cut-out W × H</th><th scope="col">Finished W × H</th><th scope="col">Padding T / R / B / L</th><th scope="col">Top-left corner</th><th scope="col">Lies</th><th scope="col">Pattern on the panel</th></tr></thead>
+<tbody>
+<tr data-piece="P2#1"><th scope="row">P2#1</th><td>P2</td><td><strong>460 × 710</strong></td><td>450 × 700</td><td>5 / 5 / 5 / 5</td><td>0 from left, 90 from top</td><td>upright</td><td>↔ runs across the panel</td></tr>
+<tr data-piece="P1#1"><th scope="row">P1#1</th><td>P1</td><td><strong>600 × 900</strong></td><td>600 × 900</td><td>none</td><td>460 from left, 200 from top</td><td>turned 90°</td><td>↕ runs up the panel</td></tr>
+</tbody>
+</table>
+<h3>Leftovers</h3>
+<table>
+<thead><tr><th scope="col">Leftover</th><th scope="col">Size as drawn</th><th scope="col">Top-left corner</th><th scope="col" class="num">Area</th><th scope="col">Keep or scrap</th></tr></thead>
+<tbody>
+<tr><th scope="row">R1/r1</th><td>460 × 90</td><td>0 from left, 0 from top</td><td class="num">0.0414 m²</td><td>Scrap: Short side 90 mm &lt; minimum 200 mm</td></tr>
+<tr><th scope="row">R1/r2</th><td>40 × 600</td><td>1,360 from left, 200 from top</td><td class="num">0.024 m²</td><td>Scrap: Short side 40 mm &lt; minimum 200 mm</td></tr>
+<tr><th scope="row">R1/r3</th><td>940 × 200</td><td>460 from left, 0 from top</td><td class="num">0.188 m²</td><td>Keep: Meets reusable-remnant policy</td></tr>
+</tbody>
+</table>
+</section>
+<section class="source" aria-labelledby="src-2">
+<h2 id="src-2">Sheet 2 of 2: New roll roll-2800</h2>
+<p>1,000 mm long × 2,800 mm high, drawn with its length left to right from the start of the roll. The pattern runs ↔ left to right on this sheet. All positions below are in mm from the sheet's top-left corner as drawn.</p>
+<figure class="drawing"><svg xmlns="http://www.w3.org/2000/svg" width="760" height="1153" viewBox="0 0 760 1153" font-family="Helvetica, Arial, sans-serif" role="img" aria-label="Cutting sheet for new roll roll-2800, 1,000 mm long and 2,800 mm high: 1 piece and 2 numbered cuts. The pieces, cuts and leftovers are also listed as tables with this drawing." data-drawing="94a102e006">
+<title>Cutting sheet for new roll roll-2800, 1,000 mm long and 2,800 mm high: 1 piece and 2 numbered cuts. The pieces, cuts and leftovers are also listed as tables with this drawing.</title>
+<defs><pattern id="hatch-94a102e006" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="8" stroke="#8a8a8a" stroke-width="2"/></pattern></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="30" y="26" font-size="17" font-weight="bold" fill="#1f4e79">ORDER FROM SUPPLIER: 1 m of roll-2800 (2,800 mm high)</text>
+<text x="30" y="48" font-size="12.5">Layout needs 900 mm → rounded up to whole metres. The 100 mm left over is scrap: too small to keep</text>
+<text x="30" y="64" font-size="12.5">(short side 100 mm &lt; minimum 200 mm).</text>
+<rect x="30" y="82" width="321.43" height="900" fill="#f7f3ea" stroke="#222" stroke-width="1.5"/>
+<g stroke="#e2d9c4" stroke-width="1"><line x1="30" y1="94" x2="351.43" y2="94"/><line x1="30" y1="106" x2="351.43" y2="106"/><line x1="30" y1="118" x2="351.43" y2="118"/><line x1="30" y1="130" x2="351.43" y2="130"/><line x1="30" y1="142" x2="351.43" y2="142"/><line x1="30" y1="154" x2="351.43" y2="154"/><line x1="30" y1="166" x2="351.43" y2="166"/><line x1="30" y1="178" x2="351.43" y2="178"/><line x1="30" y1="190" x2="351.43" y2="190"/><line x1="30" y1="202" x2="351.43" y2="202"/><line x1="30" y1="214" x2="351.43" y2="214"/><line x1="30" y1="226" x2="351.43" y2="226"/><line x1="30" y1="238" x2="351.43" y2="238"/><line x1="30" y1="250" x2="351.43" y2="250"/><line x1="30" y1="262" x2="351.43" y2="262"/><line x1="30" y1="274" x2="351.43" y2="274"/><line x1="30" y1="286" x2="351.43" y2="286"/><line x1="30" y1="298" x2="351.43" y2="298"/><line x1="30" y1="310" x2="351.43" y2="310"/><line x1="30" y1="322" x2="351.43" y2="322"/><line x1="30" y1="334" x2="351.43" y2="334"/><line x1="30" y1="346" x2="351.43" y2="346"/><line x1="30" y1="358" x2="351.43" y2="358"/><line x1="30" y1="370" x2="351.43" y2="370"/><line x1="30" y1="382" x2="351.43" y2="382"/><line x1="30" y1="394" x2="351.43" y2="394"/><line x1="30" y1="406" x2="351.43" y2="406"/><line x1="30" y1="418" x2="351.43" y2="418"/><line x1="30" y1="430" x2="351.43" y2="430"/><line x1="30" y1="442" x2="351.43" y2="442"/><line x1="30" y1="454" x2="351.43" y2="454"/><line x1="30" y1="466" x2="351.43" y2="466"/><line x1="30" y1="478" x2="351.43" y2="478"/><line x1="30" y1="490" x2="351.43" y2="490"/><line x1="30" y1="502" x2="351.43" y2="502"/><line x1="30" y1="514" x2="351.43" y2="514"/><line x1="30" y1="526" x2="351.43" y2="526"/><line x1="30" y1="538" x2="351.43" y2="538"/><line x1="30" y1="550" x2="351.43" y2="550"/><line x1="30" y1="562" x2="351.43" y2="562"/><line x1="30" y1="574" x2="351.43" y2="574"/><line x1="30" y1="586" x2="351.43" y2="586"/><line x1="30" y1="598" x2="351.43" y2="598"/><line x1="30" y1="610" x2="351.43" y2="610"/><line x1="30" y1="622" x2="351.43" y2="622"/><line x1="30" y1="634" x2="351.43" y2="634"/><line x1="30" y1="646" x2="351.43" y2="646"/><line x1="30" y1="658" x2="351.43" y2="658"/><line x1="30" y1="670" x2="351.43" y2="670"/><line x1="30" y1="682" x2="351.43" y2="682"/><line x1="30" y1="694" x2="351.43" y2="694"/><line x1="30" y1="706" x2="351.43" y2="706"/><line x1="30" y1="718" x2="351.43" y2="718"/><line x1="30" y1="730" x2="351.43" y2="730"/><line x1="30" y1="742" x2="351.43" y2="742"/><line x1="30" y1="754" x2="351.43" y2="754"/><line x1="30" y1="766" x2="351.43" y2="766"/><line x1="30" y1="778" x2="351.43" y2="778"/><line x1="30" y1="790" x2="351.43" y2="790"/><line x1="30" y1="802" x2="351.43" y2="802"/><line x1="30" y1="814" x2="351.43" y2="814"/><line x1="30" y1="826" x2="351.43" y2="826"/><line x1="30" y1="838" x2="351.43" y2="838"/><line x1="30" y1="850" x2="351.43" y2="850"/><line x1="30" y1="862" x2="351.43" y2="862"/><line x1="30" y1="874" x2="351.43" y2="874"/><line x1="30" y1="886" x2="351.43" y2="886"/><line x1="30" y1="898" x2="351.43" y2="898"/><line x1="30" y1="910" x2="351.43" y2="910"/><line x1="30" y1="922" x2="351.43" y2="922"/><line x1="30" y1="934" x2="351.43" y2="934"/><line x1="30" y1="946" x2="351.43" y2="946"/><line x1="30" y1="958" x2="351.43" y2="958"/><line x1="30" y1="970" x2="351.43" y2="970"/><line x1="30" y1="982" x2="351.43" y2="982"/></g>
+<rect data-leftover="new-roll:roll-2800/r1" x="30" y="82" width="289.29" height="707.14" fill="#d8f0d2" fill-opacity="0.85" stroke="#6a6a6a" stroke-width="0.8"/>
+<text x="174.64" y="438.25" font-size="7.65" text-anchor="middle" fill="#3c5a35">reusable 900×2,200</text>
+<rect data-leftover="new-roll:roll-2800/r2" x="319.29" y="82" width="32.14" height="900" fill="url(#hatch-94a102e006)" fill-opacity="0.85" stroke="#6a6a6a" stroke-width="0.8"/>
+<text x="335.36" y="534.68" font-size="7.65" text-anchor="middle" fill="#3c5a35" transform="rotate(-90 335.36 532)">surplus (scrap) 100×2,800</text>
+<rect data-piece="P1#2" x="30" y="789.14" width="289.29" height="192.86" fill="#cfe2f7" fill-opacity="0.9" stroke="#1f4e79" stroke-width="1"/>
+<text x="174.64" y="803.84" font-size="7" text-anchor="middle" fill="#1f4e79">900</text>
+<text x="42.95" y="885.57" font-size="7" text-anchor="middle" fill="#1f4e79" transform="rotate(-90 42.95 885.57)">600</text>
+<text x="174.64" y="879.44" font-size="9" font-weight="bold" text-anchor="middle">P1#2</text>
+<text x="174.64" y="889.41" font-size="7.65" font-weight="bold" text-anchor="middle">600 × 900 mm</text>
+<text x="174.64" y="898.2" font-size="6.84" text-anchor="middle">turned 90° · grain ↕</text>
+<g data-cut="5"><line x1="319.29" y1="982" x2="319.29" y2="82" stroke="#b02a1d" stroke-width="1.4"/><circle cx="319.29" cy="757" r="6.75" fill="#b02a1d"/><text x="319.29" y="759.7" font-size="6.75" text-anchor="middle" fill="#fff">5</text></g>
+<g data-cut="6"><line x1="30" y1="789.14" x2="319.29" y2="789.14" stroke="#b02a1d" stroke-width="1.4"/><circle cx="102.32" cy="789.14" r="6.75" fill="#b02a1d"/><text x="102.32" y="791.84" font-size="6.75" text-anchor="middle" fill="#fff">6</text></g>
+<g stroke="#c0392b" stroke-width="1"><line x1="30" y1="1004" x2="319.29" y2="1004"/><line x1="30" y1="999" x2="30" y2="1009"/><line x1="319.29" y1="999" x2="319.29" y2="1009"/></g>
+<text x="174.64" y="1020" font-size="11" font-weight="bold" fill="#c0392b" text-anchor="middle">needed 900</text>
+<g stroke="#1f4e79" stroke-width="1"><line x1="30" y1="1044" x2="351.43" y2="1044"/><line x1="30" y1="1039" x2="30" y2="1049"/><line x1="351.43" y1="1039" x2="351.43" y2="1049"/></g>
+<text x="190.71" y="1060" font-size="11" font-weight="bold" fill="#1f4e79" text-anchor="middle">ordered 1,000</text>
+<text x="30" y="1088" font-size="11" fill="#444">Cut in numbered order, each cut edge to edge (red) · blue = cut-out, dashed = finished size · green = reusable leftover · hatched = scrap · sizes in mm</text>
+<g stroke="#222" stroke-width="1.4"><line x1="30" y1="1102" x2="94.29" y2="1102"/><line x1="30" y1="1098" x2="30" y2="1106"/><line x1="94.29" y1="1098" x2="94.29" y2="1106"/></g><text x="102.29" y="1106" font-size="11" fill="#444">= 200 mm · proportional drawing, not actual size: cut by the printed sizes · pattern runs ↔ left to right on this sheet</text>
+<text x="30" y="1121" font-size="10" fill="#444">Job revision revision-id · material material-id · printed 2026-11-17 17:18 UTC</text>
+<text x="30" y="1136" font-size="9" fill="#666">Plan C-a61851f0c9c8704a · DreamGlass 1.4.0 · solver dreamglass-hybrid/1.4.0 · checker dreamglass-validator/1.3.0</text>
+</svg>
+<figcaption>Drawing of sheet 2. Proportional, not actual size: cut by the sizes in the tables.</figcaption></figure>
+<h3>Cut steps</h3>
+<table>
+<thead><tr><th scope="col">Step</th><th scope="col">Direction</th><th scope="col">Position</th><th scope="col">Runs from – to</th><th scope="col" class="num">Length</th></tr></thead>
+<tbody>
+<tr data-cut="5"><th scope="row">5</th><td>Top to bottom</td><td>900 from the left</td><td>0 – 2,800 from the top</td><td class="num">2,800</td></tr>
+<tr data-cut="6"><th scope="row">6</th><td>Left to right</td><td>2,200 from the top</td><td>0 – 900 from the left</td><td class="num">900</td></tr>
+</tbody>
+</table>
+<p class="note">Make the cuts in this order. Each cut runs from edge to edge of the piece it divides.</p>
+<h3>Pieces</h3>
+<table>
+<thead><tr><th scope="col">Piece</th><th scope="col">Label</th><th scope="col">Cut-out W × H</th><th scope="col">Finished W × H</th><th scope="col">Padding T / R / B / L</th><th scope="col">Top-left corner</th><th scope="col">Lies</th><th scope="col">Pattern on the panel</th></tr></thead>
+<tbody>
+<tr data-piece="P1#2"><th scope="row">P1#2</th><td>P1</td><td><strong>600 × 900</strong></td><td>600 × 900</td><td>none</td><td>0 from left, 2,200 from top</td><td>turned 90°</td><td>↕ runs up the panel</td></tr>
+</tbody>
+</table>
+<h3>Leftovers</h3>
+<table>
+<thead><tr><th scope="col">Leftover</th><th scope="col">Size as drawn</th><th scope="col">Top-left corner</th><th scope="col" class="num">Area</th><th scope="col">Keep or scrap</th></tr></thead>
+<tbody>
+<tr><th scope="row">new-roll:roll-2800/r1</th><td>900 × 2,200</td><td>0 from left, 0 from top</td><td class="num">1.98 m²</td><td>Keep: Meets reusable-remnant policy</td></tr>
+<tr><th scope="row">new-roll:roll-2800/r2</th><td>100 × 2,800</td><td>900 from left, 0 from top</td><td class="num">0.28 m²</td><td>Scrap (left over from rounding up the order): Short side 100 mm &lt; minimum 200 mm</td></tr>
+</tbody>
+</table>
+</section>
+</main>
+<footer>
+<p>Plan C-a61851f0c9c8704a &#183; DreamGlass 1.4.0 &#183; solver dreamglass-hybrid/1.4.0 &#183; checker dreamglass-validator/1.3.0 · snapshot 00ac62e4da99</p>
+<p>Generated from the checked plan and its frozen job snapshot. Do not edit by hand: re-run the optimisation instead.</p>
+</footer>
+</body>
+</html>

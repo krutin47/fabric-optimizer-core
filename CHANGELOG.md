@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.4.0 — 2026-11-17 (solver `dreamglass-hybrid/1.4.0`, validator `dreamglass-validator/1.3.0`)
+
+Changes for the DreamGlass Production Engineering Handbook v1.1, and a faster search.
+
+- **Search.** Finished layouts are reduced to their figures and a structural key first; duplicates and layouts that
+  cannot earn a place are skipped before the full plan is built (ADR-019). Every returned plan is still built and
+  independently validated; a rejected one is dropped and the selection repeated. A second improvement walk keeps the
+  shortest layout at the best price, so layouts reach the next cheaper whole metre. Each L-shaped leftover is re-cut
+  the way that leaves less scrap and a bigger keepable piece. Configurations that cannot hold the job or cannot rank
+  first are skipped. Defaults: 32 kept plans, 8,000 steps without progress. Against 1.3.3 on 56 synthetic jobs (3 s
+  each): better on 49, equal on 5, worse on 2.
+- **Exact solver.** Proves the lowest price as well as the least purchased area (they differ when roll widths have
+  different prices), prunes with lower bounds (5–9× faster), has a machine-independent work cap, and is tried on jobs
+  up to 40 pieces (its real limit is the number of distinct piece combinations).
+- **Bounds and labels (ADR-010).** Plans carry an area bound and a price bound with method, `proven` flag and gap as a
+  percentage of the bound; the relaxation adds a wide-piece argument. `BoundedGap` follows the ranking's first tier.
+  Wording: "Price proven lowest" / "Price at the lower bound" / "Best verified plan found".
+- **Contracts.** Material ledger (new consumed, rounding surplus, warehouse untouched, stock depletion proxy); snapshot
+  hash and job revision on every plan; organisation id on the snapshot and stock; excluded stock with reasons;
+  required orientation and source pattern axis on placements; exact and rounded purchase cost; run start/end times and
+  runtime context; rejected plans with failure codes; skip counters and time split.
+- **Validator 1.3.0.** `INPUT_VERSION_MISMATCH`, `ORGANIZATION_MISMATCH`, `EXCLUDED_STOCK_USED`, `LEDGER_MISMATCH`,
+  `ARITHMETIC_OVERFLOW` (128-bit area sums), quality-claim checks; codes documented.
+- **Approval.** Optional live state: refuses a stale job revision, a changed or missing stock version, another
+  organisation, or an inactive organisation, with stable codes (`PlanApprovalException`).
+- **Printing.** Printable cut plan (`CutPlanDocument`, CLI `--html`, playground button): order, warehouse pieces,
+  material summary, and per sheet the drawing with numbered cut steps, pieces and leftovers as tables. Drawings carry a
+  text description, a scale bar with "not actual size", the pattern direction in words, the job and material.
+  `SheetTransform` holds the coordinate transforms with their inverses.
+- **Playground.** "Leave out because" column for warehouse pieces; honest quality labels; table rows highlight pieces
+  and cuts on the drawing; status messages for screen readers; ledger figures; Problem Details errors with a
+  correlation id.
+- **Repository.** `AGENTS.md`, `CONTRIBUTING.md`, ADRs, requirements ledger, test matrix, validator codes, threat
+  model, PR template, `.editorconfig`, `global.json`, package lock files, warnings as errors everywhere, and a CI
+  workflow with pinned actions and read-only permissions.
+- 26 new tests (177 total), including the handbook's A1 tests that apply to this library.
+
 ## 1.3.3 — 2026-11-12 (playground only; solver unchanged at `dreamglass-hybrid/1.3.0`, validator at `dreamglass-validator/1.2.0`)
 
 For a hosted playground shared with a few testers, without Microsoft sign-in.

@@ -1,78 +1,115 @@
 {
-  "runId": "4b9c752c8a604277b14d3e84dc59791c",
-  "inputHash": "082e2591a25c4917d4aaaa56dedcc233cda99ed930cbe1c992ec8450366518cb",
+  "runId": "2fd2c5a4cba14546b26feb6614adfd7f",
+  "inputHash": "b690b8d07d4fa49611b55d65af87dc3ebf01c0ebe8f241adf253d0b3fc0a1b81",
+  "snapshotHash": "00ac62e4da997e9ed458baeb5989404f2e541ad8eb622651c177b31c5821b4ee",
+  "organizationId": null,
+  "jobId": null,
+  "jobRevisionId": "revision-id",
+  "startedAtUtc": "2026-11-17T17:18:13.5067363+00:00",
+  "completedAtUtc": "2026-11-17T17:18:13.8892795+00:00",
+  "runtime": {
+    "framework": ".NET 10.0.14",
+    "operatingSystem": "Ubuntu 24.04.5 LTS",
+    "architecture": "X64",
+    "processorCount": 4
+  },
   "schemaVersion": 1,
-  "solverVersion": "dreamglass-hybrid/1.3.0",
+  "solverVersion": "dreamglass-hybrid/1.4.0",
   "objectiveVersion": "cheapest-first",
   "objectiveApproved": true,
-  "validatorVersion": "dreamglass-validator/1.2.0",
+  "validatorVersion": "dreamglass-validator/1.3.0",
   "seed": 12345,
   "mode": "Deterministic",
-  "elapsedMs": 396,
+  "elapsedMs": 382,
   "timeBudgetMs": 5000,
   "status": "Succeeded",
   "stopReason": "WorkBudget",
-  "resultHash": "3c538ad7b2eb1d5c622b02f62f15343433f20bac3115b631bbad47e468d87234",
+  "resultHash": "8355c685263f5df9b87d616e48a745f2b506fe16237e4c78d17c3594f8d009d7",
   "diagnostics": {
     "warnings": [],
     "infeasibilityReasons": [],
     "failureMessage": null,
     "constructionsAttempted": 1125,
-    "completePlansBuilt": 1902,
-    "plansValidated": 40,
+    "completePlansBuilt": 2230,
+    "plansValidated": 3,
     "plansRejectedByValidator": 0,
-    "beamRuns": 9,
-    "improvementIterations": 1321,
-    "poolSize": 40,
+    "beamRuns": 6,
+    "improvementIterations": 1339,
+    "poolSize": 28,
     "workUnitsUsed": 2500,
     "reproducible": true,
     "phases": [
       {
         "phase": "exact",
-        "elapsedMs": 101,
+        "elapsedMs": 57,
         "iterations": 1
       },
       {
         "phase": "constructive",
-        "elapsedMs": 79,
+        "elapsedMs": 60,
         "iterations": 1125
       },
       {
         "phase": "beam",
-        "elapsedMs": 11,
-        "iterations": 9
+        "elapsedMs": 13,
+        "iterations": 6
       },
       {
         "phase": "improve",
-        "elapsedMs": 80,
+        "elapsedMs": 51,
         "iterations": 1
       }
     ],
+    "constructionMs": 52,
+    "assemblyMs": 65,
+    "validationMs": 40,
     "exact": {
       "attempted": true,
       "completed": true,
-      "reason": "Completed: minimum purchased area proven over all guillotine plans and source assignments.",
+      "reason": "Completed: minimum purchased area and minimum purchase cost proven over all guillotine plans, source assignments and roll offers.",
       "statesExplored": 7,
-      "elapsedMs": 30,
+      "workUnits": 9,
+      "elapsedMs": 29,
       "provenMinPurchasedAreaM2": 2.8,
+      "provenMinPurchaseCost": 35.000,
       "provenInfeasible": false
     },
     "purchasedAreaLowerBoundM2": 2.8,
     "purchasedAreaLowerBoundMethod": "ExactGuillotineDP",
-    "rejectionSamples": []
+    "duplicateLayoutsSkipped": 2202,
+    "uncompetitiveLayoutsSkipped": 0,
+    "purchaseCostLowerBound": 35.000,
+    "purchaseCostLowerBoundMethod": "ExactGuillotineDP",
+    "rejectionSamples": [],
+    "rejectedCandidates": []
   },
   "inputErrors": [],
   "candidates": [
     {
-      "candidateId": "C-9eb347fb8bda0bb5",
+      "candidateId": "C-de78553c797aed79",
+      "snapshotHash": "00ac62e4da997e9ed458baeb5989404f2e541ad8eb622651c177b31c5821b4ee",
+      "jobRevisionId": "revision-id",
       "rank": 1,
       "qualityStatus": "BoundedGap",
       "bound": {
-        "scope": "Tier 1 only: newly purchased area (m\u00B2). Lower tiers (scrap, remnant quality, cost, cuts) are not bounded.",
+        "metric": "PurchasedAreaM2",
+        "scope": "Newly purchased area (m\u00B2) only. Price, scrap, leftover size and cuts are not bounded by this figure.",
         "method": "ExactGuillotineDP",
         "lowerBoundM2": 2.8,
         "gapM2": 0.0,
-        "note": "Purchased area is proven minimal by exhaustive guillotine search."
+        "gapPercentOfBound": 0,
+        "proven": true,
+        "note": "The purchased area is proven minimal by exhaustive guillotine search."
+      },
+      "costBound": {
+        "metric": "PurchaseCost",
+        "scope": "Purchase cost only. Scrap, leftover size and cuts are not bounded by this figure.",
+        "method": "ExactGuillotineDP",
+        "lowerBoundM2": 35.000,
+        "gapM2": 0.000,
+        "gapPercentOfBound": 0,
+        "proven": true,
+        "note": "The purchase cost is proven minimal by exhaustive guillotine search."
       },
       "tags": [
         "Best by objective",
@@ -83,13 +120,17 @@
       "warnings": [
         "Predicted reusable offcuts are not inventory until physically confirmed after cutting."
       ],
-      "origin": "restart:joint:roll-2800:Random:FitFirst/LargestFirst/BestLongSideFit/VerticalFirst/rows",
+      "origin": "restart:joint:roll-2800:Random:MinExtension/SmallestFirst/BestLongSideFit/LongerLeftoverAxis",
       "metrics": {
         "requiredCutAreaM2": 1.4066,
         "purchasedAreaM2": 2.8,
+        "newConsumedAreaM2": 2.52,
+        "roundingSurplusAreaM2": 0.28,
         "purchaseCost": 35.000,
         "currency": "EUR",
         "existingStockAreaConsumedM2": 1.12,
+        "existingStockUntouchedAreaM2": 0,
+        "stockDepletionAreaM2": 0.3266,
         "totalResidualAreaM2": 2.5134,
         "reusableResidualAreaM2": 2.2334,
         "unusableScrapAreaM2": 0.28,
@@ -100,12 +141,12 @@
             "length": 900
           },
           {
-            "width": 340,
-            "length": 1400
+            "width": 800,
+            "length": 690
           },
           {
-            "width": 460,
-            "length": 690
+            "width": 340,
+            "length": 710
           }
         ],
         "largestReusableAreaM2": 1.44,
@@ -133,6 +174,8 @@
         "purchasedAreaM2": 2.8,
         "pricePerSquareMetre": 12.50,
         "purchaseCost": 35.000,
+        "purchaseCostRounded": 35.00,
+        "costRounding": "half-up to 2 decimals",
         "currency": "EUR",
         "fixedLength": false
       },
@@ -199,7 +242,9 @@
           "pieceRotated": false,
           "pieceRotationDegrees": 0,
           "sourceDisplayRotationDegrees": 270,
-          "finishedPatternDirection": "Vertical"
+          "finishedPatternDirection": "Vertical",
+          "requiredOrientation": "None",
+          "sourcePatternAxis": "Length"
         },
         {
           "pieceInstanceId": "P1#1",
@@ -231,7 +276,9 @@
           "pieceRotated": false,
           "pieceRotationDegrees": 0,
           "sourceDisplayRotationDegrees": 270,
-          "finishedPatternDirection": "Vertical"
+          "finishedPatternDirection": "Vertical",
+          "requiredOrientation": "Vertical",
+          "sourcePatternAxis": "Length"
         },
         {
           "pieceInstanceId": "P1#2",
@@ -263,7 +310,9 @@
           "pieceRotated": false,
           "pieceRotationDegrees": 0,
           "sourceDisplayRotationDegrees": 270,
-          "finishedPatternDirection": "Vertical"
+          "finishedPatternDirection": "Vertical",
+          "requiredOrientation": "Vertical",
+          "sourcePatternAxis": "Length"
         }
       ],
       "cutTrees": [
@@ -280,8 +329,8 @@
                 "width": 800,
                 "length": 1400
               },
-              "axis": "Vertical",
-              "positionMm": 460,
+              "axis": "Horizontal",
+              "positionMm": 710,
               "firstChildId": "R1/n2",
               "secondChildId": "R1/n5",
               "pieceInstanceId": null,
@@ -293,11 +342,11 @@
               "region": {
                 "x": 0,
                 "y": 0,
-                "width": 460,
-                "length": 1400
+                "width": 800,
+                "length": 710
               },
-              "axis": "Horizontal",
-              "positionMm": 710,
+              "axis": "Vertical",
+              "positionMm": 460,
               "firstChildId": "R1/n3",
               "secondChildId": "R1/n4",
               "pieceInstanceId": null,
@@ -323,10 +372,10 @@
               "nodeId": "R1/n4",
               "kind": "Residual",
               "region": {
-                "x": 0,
-                "y": 710,
-                "width": 460,
-                "length": 690
+                "x": 460,
+                "y": 0,
+                "width": 340,
+                "length": 710
               },
               "axis": null,
               "positionMm": null,
@@ -339,10 +388,10 @@
               "nodeId": "R1/n5",
               "kind": "Residual",
               "region": {
-                "x": 460,
-                "y": 0,
-                "width": 340,
-                "length": 1400
+                "x": 0,
+                "y": 710,
+                "width": 800,
+                "length": 690
               },
               "axis": null,
               "positionMm": null,
@@ -477,33 +526,33 @@
           "sequence": 1,
           "sourceId": "R1",
           "nodeId": "R1/n1",
-          "axis": "Vertical",
-          "positionMm": 460,
+          "axis": "Horizontal",
+          "positionMm": 710,
           "region": {
             "x": 0,
             "y": 0,
             "width": 800,
             "length": 1400
           },
-          "fromXMm": 460,
-          "fromYMm": 0,
-          "toXMm": 460,
-          "toYMm": 1400
+          "fromXMm": 0,
+          "fromYMm": 710,
+          "toXMm": 800,
+          "toYMm": 710
         },
         {
           "sequence": 2,
           "sourceId": "R1",
           "nodeId": "R1/n2",
-          "axis": "Horizontal",
-          "positionMm": 710,
+          "axis": "Vertical",
+          "positionMm": 460,
           "region": {
             "x": 0,
             "y": 0,
-            "width": 460,
-            "length": 1400
+            "width": 800,
+            "length": 710
           },
-          "fromXMm": 0,
-          "fromYMm": 710,
+          "fromXMm": 460,
+          "fromYMm": 0,
           "toXMm": 460,
           "toYMm": 710
         },
@@ -564,12 +613,12 @@
           "residualId": "R1/r1",
           "sourceId": "R1",
           "region": {
-            "x": 0,
-            "y": 710,
-            "width": 460,
-            "length": 690
+            "x": 460,
+            "y": 0,
+            "width": 340,
+            "length": 710
           },
-          "areaM2": 0.3174,
+          "areaM2": 0.2414,
           "eligible": true,
           "reason": "Meets reusable-remnant policy",
           "roundingSurplus": false
@@ -578,12 +627,12 @@
           "residualId": "R1/r2",
           "sourceId": "R1",
           "region": {
-            "x": 460,
-            "y": 0,
-            "width": 340,
-            "length": 1400
+            "x": 0,
+            "y": 710,
+            "width": 800,
+            "length": 690
           },
-          "areaM2": 0.476,
+          "areaM2": 0.552,
           "eligible": true,
           "reason": "Meets reusable-remnant policy",
           "roundingSurplus": false
@@ -618,21 +667,36 @@
         }
       ],
       "validation": {
-        "validatorVersion": "dreamglass-validator/1.2.0",
+        "validatorVersion": "dreamglass-validator/1.3.0",
         "passed": true,
         "failures": []
       }
     },
     {
-      "candidateId": "C-a03afd2cb127cc01",
+      "candidateId": "C-ba6148b33f650f7e",
+      "snapshotHash": "00ac62e4da997e9ed458baeb5989404f2e541ad8eb622651c177b31c5821b4ee",
+      "jobRevisionId": "revision-id",
       "rank": 2,
       "qualityStatus": "BoundedGap",
       "bound": {
-        "scope": "Tier 1 only: newly purchased area (m\u00B2). Lower tiers (scrap, remnant quality, cost, cuts) are not bounded.",
+        "metric": "PurchasedAreaM2",
+        "scope": "Newly purchased area (m\u00B2) only. Price, scrap, leftover size and cuts are not bounded by this figure.",
         "method": "ExactGuillotineDP",
         "lowerBoundM2": 2.8,
         "gapM2": 0.0,
-        "note": "Purchased area is proven minimal by exhaustive guillotine search."
+        "gapPercentOfBound": 0,
+        "proven": true,
+        "note": "The purchased area is proven minimal by exhaustive guillotine search."
+      },
+      "costBound": {
+        "metric": "PurchaseCost",
+        "scope": "Purchase cost only. Scrap, leftover size and cuts are not bounded by this figure.",
+        "method": "ExactGuillotineDP",
+        "lowerBoundM2": 35.000,
+        "gapM2": 0.000,
+        "gapPercentOfBound": 0,
+        "proven": true,
+        "note": "The purchase cost is proven minimal by exhaustive guillotine search."
       },
       "tags": [
         "Least warehouse stock committed at the best purchase"
@@ -640,13 +704,17 @@
       "warnings": [
         "Predicted reusable offcuts are not inventory until physically confirmed after cutting."
       ],
-      "origin": "restart:joint:roll-2800:LengthDesc:OpenedFirst/NoPreference/BestLongSideFit/VerticalFirst",
+      "origin": "restart:roll-only:roll-2800:Random:FitFirst/NoPreference/BestAreaFit/ShorterLeftoverAxis/rows",
       "metrics": {
         "requiredCutAreaM2": 1.4066,
         "purchasedAreaM2": 2.8,
+        "newConsumedAreaM2": 2.52,
+        "roundingSurplusAreaM2": 0.28,
         "purchaseCost": 35.000,
         "currency": "EUR",
         "existingStockAreaConsumedM2": 0,
+        "existingStockUntouchedAreaM2": 1.12,
+        "stockDepletionAreaM2": 0,
         "totalResidualAreaM2": 1.3934,
         "reusableResidualAreaM2": 1.1134,
         "unusableScrapAreaM2": 0.28,
@@ -686,6 +754,8 @@
         "purchasedAreaM2": 2.8,
         "pricePerSquareMetre": 12.50,
         "purchaseCost": 35.000,
+        "purchaseCostRounded": 35.00,
+        "costRounding": "half-up to 2 decimals",
         "currency": "EUR",
         "fixedLength": false
       },
@@ -708,82 +778,18 @@
       ],
       "placements": [
         {
-          "pieceInstanceId": "P1#1",
-          "pieceId": "P1",
-          "label": "P1",
-          "sourceId": "new-roll:roll-2800",
-          "footprint": {
-            "x": 0,
-            "y": 0,
-            "width": 600,
-            "length": 900
-          },
-          "nominalRect": {
-            "x": 0,
-            "y": 0,
-            "width": 600,
-            "length": 900
-          },
-          "nominalWidthMm": 600,
-          "nominalLengthMm": 900,
-          "cutWidthMm": 600,
-          "cutLengthMm": 900,
-          "paddingMm": {
-            "top": 0,
-            "right": 0,
-            "bottom": 0,
-            "left": 0
-          },
-          "pieceRotated": false,
-          "pieceRotationDegrees": 0,
-          "sourceDisplayRotationDegrees": 270,
-          "finishedPatternDirection": "Vertical"
-        },
-        {
-          "pieceInstanceId": "P1#2",
-          "pieceId": "P1",
-          "label": "P1",
-          "sourceId": "new-roll:roll-2800",
-          "footprint": {
-            "x": 600,
-            "y": 0,
-            "width": 600,
-            "length": 900
-          },
-          "nominalRect": {
-            "x": 600,
-            "y": 0,
-            "width": 600,
-            "length": 900
-          },
-          "nominalWidthMm": 600,
-          "nominalLengthMm": 900,
-          "cutWidthMm": 600,
-          "cutLengthMm": 900,
-          "paddingMm": {
-            "top": 0,
-            "right": 0,
-            "bottom": 0,
-            "left": 0
-          },
-          "pieceRotated": false,
-          "pieceRotationDegrees": 0,
-          "sourceDisplayRotationDegrees": 270,
-          "finishedPatternDirection": "Vertical"
-        },
-        {
           "pieceInstanceId": "P2#1",
           "pieceId": "P2",
           "label": "P2",
           "sourceId": "new-roll:roll-2800",
           "footprint": {
-            "x": 1200,
+            "x": 0,
             "y": 0,
             "width": 710,
             "length": 460
           },
           "nominalRect": {
-            "x": 1205,
+            "x": 5,
             "y": 5,
             "width": 700,
             "length": 450
@@ -801,7 +807,77 @@
           "pieceRotated": true,
           "pieceRotationDegrees": 90,
           "sourceDisplayRotationDegrees": 270,
-          "finishedPatternDirection": "Horizontal"
+          "finishedPatternDirection": "Horizontal",
+          "requiredOrientation": "None",
+          "sourcePatternAxis": "Length"
+        },
+        {
+          "pieceInstanceId": "P1#1",
+          "pieceId": "P1",
+          "label": "P1",
+          "sourceId": "new-roll:roll-2800",
+          "footprint": {
+            "x": 710,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalRect": {
+            "x": 710,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalWidthMm": 600,
+          "nominalLengthMm": 900,
+          "cutWidthMm": 600,
+          "cutLengthMm": 900,
+          "paddingMm": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "pieceRotated": false,
+          "pieceRotationDegrees": 0,
+          "sourceDisplayRotationDegrees": 270,
+          "finishedPatternDirection": "Vertical",
+          "requiredOrientation": "Vertical",
+          "sourcePatternAxis": "Length"
+        },
+        {
+          "pieceInstanceId": "P1#2",
+          "pieceId": "P1",
+          "label": "P1",
+          "sourceId": "new-roll:roll-2800",
+          "footprint": {
+            "x": 1310,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalRect": {
+            "x": 1310,
+            "y": 0,
+            "width": 600,
+            "length": 900
+          },
+          "nominalWidthMm": 600,
+          "nominalLengthMm": 900,
+          "cutWidthMm": 600,
+          "cutLengthMm": 900,
+          "paddingMm": {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          },
+          "pieceRotated": false,
+          "pieceRotationDegrees": 0,
+          "sourceDisplayRotationDegrees": 270,
+          "finishedPatternDirection": "Vertical",
+          "requiredOrientation": "Vertical",
+          "sourcePatternAxis": "Length"
         }
       ],
       "cutTrees": [
@@ -835,97 +911,33 @@
                 "length": 900
               },
               "axis": "Vertical",
-              "positionMm": 600,
+              "positionMm": 710,
               "firstChildId": "new-roll:roll-2800/n3",
-              "secondChildId": "new-roll:roll-2800/n4",
-              "pieceInstanceId": null,
-              "residualId": null
-            },
-            {
-              "nodeId": "new-roll:roll-2800/n3",
-              "kind": "Piece",
-              "region": {
-                "x": 0,
-                "y": 0,
-                "width": 600,
-                "length": 900
-              },
-              "axis": null,
-              "positionMm": null,
-              "firstChildId": null,
-              "secondChildId": null,
-              "pieceInstanceId": "P1#1",
-              "residualId": null
-            },
-            {
-              "nodeId": "new-roll:roll-2800/n4",
-              "kind": "Cut",
-              "region": {
-                "x": 600,
-                "y": 0,
-                "width": 2200,
-                "length": 900
-              },
-              "axis": "Vertical",
-              "positionMm": 1200,
-              "firstChildId": "new-roll:roll-2800/n5",
               "secondChildId": "new-roll:roll-2800/n6",
               "pieceInstanceId": null,
               "residualId": null
             },
             {
-              "nodeId": "new-roll:roll-2800/n5",
-              "kind": "Piece",
-              "region": {
-                "x": 600,
-                "y": 0,
-                "width": 600,
-                "length": 900
-              },
-              "axis": null,
-              "positionMm": null,
-              "firstChildId": null,
-              "secondChildId": null,
-              "pieceInstanceId": "P1#2",
-              "residualId": null
-            },
-            {
-              "nodeId": "new-roll:roll-2800/n6",
+              "nodeId": "new-roll:roll-2800/n3",
               "kind": "Cut",
               "region": {
-                "x": 1200,
-                "y": 0,
-                "width": 1600,
-                "length": 900
-              },
-              "axis": "Vertical",
-              "positionMm": 1910,
-              "firstChildId": "new-roll:roll-2800/n7",
-              "secondChildId": "new-roll:roll-2800/n10",
-              "pieceInstanceId": null,
-              "residualId": null
-            },
-            {
-              "nodeId": "new-roll:roll-2800/n7",
-              "kind": "Cut",
-              "region": {
-                "x": 1200,
+                "x": 0,
                 "y": 0,
                 "width": 710,
                 "length": 900
               },
               "axis": "Horizontal",
               "positionMm": 460,
-              "firstChildId": "new-roll:roll-2800/n8",
-              "secondChildId": "new-roll:roll-2800/n9",
+              "firstChildId": "new-roll:roll-2800/n4",
+              "secondChildId": "new-roll:roll-2800/n5",
               "pieceInstanceId": null,
               "residualId": null
             },
             {
-              "nodeId": "new-roll:roll-2800/n8",
+              "nodeId": "new-roll:roll-2800/n4",
               "kind": "Piece",
               "region": {
-                "x": 1200,
+                "x": 0,
                 "y": 0,
                 "width": 710,
                 "length": 460
@@ -938,10 +950,10 @@
               "residualId": null
             },
             {
-              "nodeId": "new-roll:roll-2800/n9",
+              "nodeId": "new-roll:roll-2800/n5",
               "kind": "Residual",
               "region": {
-                "x": 1200,
+                "x": 0,
                 "y": 460,
                 "width": 710,
                 "length": 440
@@ -952,6 +964,70 @@
               "secondChildId": null,
               "pieceInstanceId": null,
               "residualId": "new-roll:roll-2800/r1"
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n6",
+              "kind": "Cut",
+              "region": {
+                "x": 710,
+                "y": 0,
+                "width": 2090,
+                "length": 900
+              },
+              "axis": "Vertical",
+              "positionMm": 1310,
+              "firstChildId": "new-roll:roll-2800/n7",
+              "secondChildId": "new-roll:roll-2800/n8",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n7",
+              "kind": "Piece",
+              "region": {
+                "x": 710,
+                "y": 0,
+                "width": 600,
+                "length": 900
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": "P1#1",
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n8",
+              "kind": "Cut",
+              "region": {
+                "x": 1310,
+                "y": 0,
+                "width": 1490,
+                "length": 900
+              },
+              "axis": "Vertical",
+              "positionMm": 1910,
+              "firstChildId": "new-roll:roll-2800/n9",
+              "secondChildId": "new-roll:roll-2800/n10",
+              "pieceInstanceId": null,
+              "residualId": null
+            },
+            {
+              "nodeId": "new-roll:roll-2800/n9",
+              "kind": "Piece",
+              "region": {
+                "x": 1310,
+                "y": 0,
+                "width": 600,
+                "length": 900
+              },
+              "axis": null,
+              "positionMm": null,
+              "firstChildId": null,
+              "secondChildId": null,
+              "pieceInstanceId": "P1#2",
+              "residualId": null
             },
             {
               "nodeId": "new-roll:roll-2800/n10",
@@ -1011,68 +1087,68 @@
           "sourceId": "new-roll:roll-2800",
           "nodeId": "new-roll:roll-2800/n2",
           "axis": "Vertical",
-          "positionMm": 600,
+          "positionMm": 710,
           "region": {
             "x": 0,
             "y": 0,
             "width": 2800,
             "length": 900
           },
-          "fromXMm": 600,
+          "fromXMm": 710,
           "fromYMm": 0,
-          "toXMm": 600,
+          "toXMm": 710,
           "toYMm": 900
         },
         {
           "sequence": 3,
           "sourceId": "new-roll:roll-2800",
-          "nodeId": "new-roll:roll-2800/n4",
-          "axis": "Vertical",
-          "positionMm": 1200,
+          "nodeId": "new-roll:roll-2800/n3",
+          "axis": "Horizontal",
+          "positionMm": 460,
           "region": {
-            "x": 600,
+            "x": 0,
             "y": 0,
-            "width": 2200,
+            "width": 710,
             "length": 900
           },
-          "fromXMm": 1200,
-          "fromYMm": 0,
-          "toXMm": 1200,
-          "toYMm": 900
+          "fromXMm": 0,
+          "fromYMm": 460,
+          "toXMm": 710,
+          "toYMm": 460
         },
         {
           "sequence": 4,
           "sourceId": "new-roll:roll-2800",
           "nodeId": "new-roll:roll-2800/n6",
           "axis": "Vertical",
+          "positionMm": 1310,
+          "region": {
+            "x": 710,
+            "y": 0,
+            "width": 2090,
+            "length": 900
+          },
+          "fromXMm": 1310,
+          "fromYMm": 0,
+          "toXMm": 1310,
+          "toYMm": 900
+        },
+        {
+          "sequence": 5,
+          "sourceId": "new-roll:roll-2800",
+          "nodeId": "new-roll:roll-2800/n8",
+          "axis": "Vertical",
           "positionMm": 1910,
           "region": {
-            "x": 1200,
+            "x": 1310,
             "y": 0,
-            "width": 1600,
+            "width": 1490,
             "length": 900
           },
           "fromXMm": 1910,
           "fromYMm": 0,
           "toXMm": 1910,
           "toYMm": 900
-        },
-        {
-          "sequence": 5,
-          "sourceId": "new-roll:roll-2800",
-          "nodeId": "new-roll:roll-2800/n7",
-          "axis": "Horizontal",
-          "positionMm": 460,
-          "region": {
-            "x": 1200,
-            "y": 0,
-            "width": 710,
-            "length": 900
-          },
-          "fromXMm": 1200,
-          "fromYMm": 460,
-          "toXMm": 1910,
-          "toYMm": 460
         }
       ],
       "predictedResiduals": [
@@ -1080,7 +1156,7 @@
           "residualId": "new-roll:roll-2800/r1",
           "sourceId": "new-roll:roll-2800",
           "region": {
-            "x": 1200,
+            "x": 0,
             "y": 460,
             "width": 710,
             "length": 440
@@ -1120,21 +1196,36 @@
         }
       ],
       "validation": {
-        "validatorVersion": "dreamglass-validator/1.2.0",
+        "validatorVersion": "dreamglass-validator/1.3.0",
         "passed": true,
         "failures": []
       }
     },
     {
       "candidateId": "C-a61851f0c9c8704a",
+      "snapshotHash": "00ac62e4da997e9ed458baeb5989404f2e541ad8eb622651c177b31c5821b4ee",
+      "jobRevisionId": "revision-id",
       "rank": 3,
       "qualityStatus": "BoundedGap",
       "bound": {
-        "scope": "Tier 1 only: newly purchased area (m\u00B2). Lower tiers (scrap, remnant quality, cost, cuts) are not bounded.",
+        "metric": "PurchasedAreaM2",
+        "scope": "Newly purchased area (m\u00B2) only. Price, scrap, leftover size and cuts are not bounded by this figure.",
         "method": "ExactGuillotineDP",
         "lowerBoundM2": 2.8,
         "gapM2": 0.0,
-        "note": "Purchased area is proven minimal by exhaustive guillotine search."
+        "gapPercentOfBound": 0,
+        "proven": true,
+        "note": "The purchased area is proven minimal by exhaustive guillotine search."
+      },
+      "costBound": {
+        "metric": "PurchaseCost",
+        "scope": "Purchase cost only. Scrap, leftover size and cuts are not bounded by this figure.",
+        "method": "ExactGuillotineDP",
+        "lowerBoundM2": 35.000,
+        "gapM2": 0.000,
+        "gapPercentOfBound": 0,
+        "proven": true,
+        "note": "The purchase cost is proven minimal by exhaustive guillotine search."
       },
       "tags": [
         "Largest reusable remnant"
@@ -1142,13 +1233,17 @@
       "warnings": [
         "Predicted reusable offcuts are not inventory until physically confirmed after cutting."
       ],
-      "origin": "restart:joint:roll-2800:Random:RemnantsFirst/LargestFirst/BestAreaFit/ShorterLeftoverAxis/rows",
+      "origin": "restart:joint:roll-2800:Random:MinExtension/SmallestFirst/BestAreaFit/MinimizeSmallerResidual",
       "metrics": {
         "requiredCutAreaM2": 1.4066,
         "purchasedAreaM2": 2.8,
+        "newConsumedAreaM2": 2.52,
+        "roundingSurplusAreaM2": 0.28,
         "purchaseCost": 35.000,
         "currency": "EUR",
         "existingStockAreaConsumedM2": 1.12,
+        "existingStockUntouchedAreaM2": 0,
+        "stockDepletionAreaM2": 0.932,
         "totalResidualAreaM2": 2.5134,
         "reusableResidualAreaM2": 2.168,
         "unusableScrapAreaM2": 0.3454,
@@ -1188,6 +1283,8 @@
         "purchasedAreaM2": 2.8,
         "pricePerSquareMetre": 12.50,
         "purchaseCost": 35.000,
+        "purchaseCostRounded": 35.00,
+        "costRounding": "half-up to 2 decimals",
         "currency": "EUR",
         "fixedLength": false
       },
@@ -1254,7 +1351,9 @@
           "pieceRotated": true,
           "pieceRotationDegrees": 90,
           "sourceDisplayRotationDegrees": 270,
-          "finishedPatternDirection": "Horizontal"
+          "finishedPatternDirection": "Horizontal",
+          "requiredOrientation": "None",
+          "sourcePatternAxis": "Length"
         },
         {
           "pieceInstanceId": "P1#1",
@@ -1286,7 +1385,9 @@
           "pieceRotated": false,
           "pieceRotationDegrees": 0,
           "sourceDisplayRotationDegrees": 270,
-          "finishedPatternDirection": "Vertical"
+          "finishedPatternDirection": "Vertical",
+          "requiredOrientation": "Vertical",
+          "sourcePatternAxis": "Length"
         },
         {
           "pieceInstanceId": "P1#2",
@@ -1318,7 +1419,9 @@
           "pieceRotated": false,
           "pieceRotationDegrees": 0,
           "sourceDisplayRotationDegrees": 270,
-          "finishedPatternDirection": "Vertical"
+          "finishedPatternDirection": "Vertical",
+          "requiredOrientation": "Vertical",
+          "sourcePatternAxis": "Length"
         }
       ],
       "cutTrees": [
@@ -1736,7 +1839,7 @@
         }
       ],
       "validation": {
-        "validatorVersion": "dreamglass-validator/1.2.0",
+        "validatorVersion": "dreamglass-validator/1.3.0",
         "passed": true,
         "failures": []
       }

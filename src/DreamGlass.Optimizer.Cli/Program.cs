@@ -193,7 +193,7 @@ static int Bench(string[] a)
 /// <summary>Machine-readable benchmark rows, for comparing two builds on the same jobs (see docs/testing).</summary>
 static int BenchCsv(int[] sizes, int seeds, int time, OptimizationOptions options, HybridCutOptimizer optimizer)
 {
-    Console.WriteLine("instances,seed,status,ms,cost,scrap_m2,largest_keep_m2,used_mm,cuts,purchased_m2,stock_m2");
+    Console.WriteLine("instances,seed,status,ms,cost,scrap_m2,largest_keep_m2,used_mm,cuts,purchased_m2,stock_m2,cost_lb,area_lb_m2,exact");
     foreach (int n in sizes)
         for (int seed = 1; seed <= seeds; seed++)
         {
@@ -202,7 +202,9 @@ static int BenchCsv(int[] sizes, int seeds, int time, OptimizationOptions option
             var r = optimizer.Optimize(job, options);
             sw.Stop();
             var m = r.Candidates.FirstOrDefault()?.Metrics;
-            Console.WriteLine(string.Join(',', n, seed, r.Status, sw.ElapsedMilliseconds, m?.PurchaseCost, m?.UnusableScrapAreaM2, m?.LargestReusableAreaM2, m?.ConsumedLengthMm ?? 0, m?.TotalCuts, m?.PurchasedAreaM2, m?.ExistingStockAreaConsumedM2));
+            var d = r.Diagnostics;
+            string exact = d.Exact is { Attempted: true } e ? (e.Completed ? "proved" : "aborted") : "";
+            Console.WriteLine(string.Join(',', n, seed, r.Status, sw.ElapsedMilliseconds, m?.PurchaseCost, m?.UnusableScrapAreaM2, m?.LargestReusableAreaM2, m?.ConsumedLengthMm ?? 0, m?.TotalCuts, m?.PurchasedAreaM2, m?.ExistingStockAreaConsumedM2, d.PurchaseCostLowerBound, d.PurchasedAreaLowerBoundM2, exact));
         }
 
     return 0;
