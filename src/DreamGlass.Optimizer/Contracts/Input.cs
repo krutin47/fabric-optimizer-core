@@ -1,19 +1,38 @@
 namespace DreamGlass.Optimizer.Contracts;
 
 /// <summary>
-/// Immutable business input for one optimisation run (spec §3). All lengths are millimetres expressed as
-/// <see cref="decimal"/> so that no input is silently rounded; they are converted to scaled integers using
-/// <see cref="Precision"/> before search.
+/// Immutable business input for one optimisation run (spec §3, handbook §97). All lengths are millimetres expressed
+/// as <see cref="decimal"/> so that no input is silently rounded; they are converted to scaled integers using
+/// <see cref="Precision"/> before search. Every candidate refers back to this snapshot by its hash
+/// (<see cref="CandidateCutPlan.SnapshotHash"/>), never to live prices or stock.
 /// </summary>
 public sealed record OptimizationSnapshot
 {
     public int SchemaVersion { get; init; } = 1;
+
+    /// <summary>
+    /// The organisation (tenant) this job belongs to, as resolved by the host from the verified identity — never from
+    /// a client-chosen value. Opaque to the optimiser. When set, every stock item must carry the same id; when not
+    /// set (local tools), no stock item may carry one. The host stays responsible for authorisation.
+    /// </summary>
+    public string? OrganizationId { get; init; }
+
+    /// <summary>The job this snapshot was taken from (opaque; echoed for traceability).</summary>
+    public string? JobId { get; init; }
+
     public string JobRevisionId { get; init; } = "";
     public string MaterialId { get; init; } = "";
     public bool MaterialDirectional { get; init; }
     public IReadOnlyList<PieceRequest> Pieces { get; init; } = [];
     public IReadOnlyList<RollOffer> RollOffers { get; init; } = [];
     public IReadOnlyList<StockItem> Stock { get; init; } = [];
+
+    /// <summary>
+    /// Warehouse pieces of this material that were deliberately left out (damaged, held, reserved, excluded by the
+    /// planner), each with its reason. The search never uses them and the validator rejects any plan that does; they
+    /// are part of the snapshot so the record shows why a purchase was needed.
+    /// </summary>
+    public IReadOnlyList<ExcludedStock> ExcludedStock { get; init; } = [];
 
     /// <summary>
     /// Illustrative remnant-eligibility policy. <b>Open business decision (spec §12.2)</b>; when absent every
@@ -84,6 +103,19 @@ public sealed record StockItem
     public string? MaterialId { get; init; }
     public bool Available { get; init; } = true;
     public string? BinReference { get; init; }
+
+    /// <summary>Owning organisation; must equal <see cref="OptimizationSnapshot.OrganizationId"/>.</summary>
+    public string? OrganizationId { get; init; }
+}
+
+/// <summary>A warehouse piece left out of the job, with the reason (handbook §97 "exclusion reasons").</summary>
+public sealed record ExcludedStock
+{
+    public string StockId { get; init; } = "";
+    public long? Version { get; init; }
+
+    /// <summary>Why it is not offered, e.g. "Damaged", "Reserved for another job", "Excluded by planner: water stain".</summary>
+    public string Reason { get; init; } = "";
 }
 
 /// <summary>

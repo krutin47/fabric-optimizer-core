@@ -78,6 +78,7 @@ internal static class Normalizer
                 L = fixedLen ?? 0,
                 Axis = o.PatternAxis,
                 Offer = o,
+                Group = "roll:" + o.OfferId,
                 MetreUnits = Units.MetreUnits(scale),
                 FixedLengthUnits = fixedLen,
                 MinOrderMetres = o.MinOrderMetres,
@@ -92,9 +93,18 @@ internal static class Normalizer
             ? new RemnantPolicyUnits(U(rp.MinWidthMm), U(rp.MinLengthMm), rp.MinAreaM2, rp.MaxAspectRatio)
             : null;
 
+        var byArea = Enumerable.Range(0, instances.Count).ToArray();
+        Array.Sort(byArea, (a, b) =>
+        {
+            int c = types[instances[b].Type].FootArea.CompareTo(types[instances[a].Type].FootArea);
+            return c != 0 ? c : a.CompareTo(b);
+        });
+
         return new NormalizedProblem
         {
+            InstancesByAreaDesc = byArea,
             Snapshot = s,
+            SnapshotHash = OptimizerJson.SnapshotHash(s),
             Scale = scale,
             Directional = s.MaterialDirectional,
             Types = types,
@@ -105,6 +115,8 @@ internal static class Normalizer
             Policy = policy,
             RequiredArea = required,
             TotalRemnantArea = remnantArea,
+            MinPieceSide = types.Length == 0 ? 0 : types.Min(t => t.MinSide),
+            MinPieceArea = types.Length == 0 ? 0 : types.Min(t => t.FootArea),
         };
     }
 

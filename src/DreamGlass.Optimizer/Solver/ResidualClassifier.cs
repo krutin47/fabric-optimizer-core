@@ -9,6 +9,18 @@ internal static class ResidualClassifier
 {
     public readonly record struct Outcome(bool Eligible, string Reason, bool Thin);
 
+    /// <summary>Same decision as <see cref="Classify"/> without building the reason text (search hot path).</summary>
+    public static (bool Eligible, bool Thin) Evaluate(long w, long h, RemnantPolicyUnits? policy, long scale)
+    {
+        if (policy is null) return (false, false);
+        long shortSide = Math.Min(w, h), longSide = Math.Max(w, h);
+        if (shortSide < policy.MinShort) return (false, true);
+        if (longSide < policy.MinLong) return (false, false);
+        if (policy.MinAreaM2 is decimal minArea && Units.AreaToM2(w * h, scale) < minArea) return (false, false);
+        if (policy.MaxAspectRatio is decimal maxAspect && (decimal)longSide / shortSide > maxAspect) return (false, false);
+        return (true, false);
+    }
+
     public static Outcome Classify(long w, long h, RemnantPolicyUnits? policy, long scale)
     {
         if (policy is null) return new Outcome(false, "No reusable-remnant policy configured", false);

@@ -57,6 +57,7 @@ internal static class Finalizer
                 if (NormalizedProblem.OrderedLength(l.Spec, consumed) is not long ordered) return null;
                 root = Clip(root, consumed);
                 Node.Canonicalize(root);
+                ResplitResiduals(root, p);
                 if (ordered > consumed)
                 {
                     var top = new Node(new Rect(0, 0, l.Spec.W, ordered), null) { Axis = CutAxis.Horizontal, Pos = consumed };
@@ -71,6 +72,7 @@ internal static class Finalizer
             else
             {
                 Node.Canonicalize(root);
+                ResplitResiduals(root, p);
                 sources.Add(new FinalSource { Spec = l.Spec, Root = root, Length = l.Spec.L });
             }
         }
@@ -110,6 +112,78 @@ internal static class Finalizer
             Origin = st.Origin,
             Config = st.Config,
         };
+    }
+
+    /// <summary>
+    /// Leftover re-split. Where two leftovers form an "L" around a block of pieces, the L can be cut into two
+    /// rectangles in two ways (cut across first, or along first). The search fixed one way when it placed the
+    /// piece; once every piece is in place the better way is known. This pass re-cuts each such L so that less
+    /// area ends up below the keep-size, and then so that the bigger keepable leftover is as big as possible.
+    /// Pieces do not move and the number of cuts does not change, so the plan stays as valid as before (and is
+    /// validated as usual).
+    /// </summary>
+    internal static void ResplitResiduals(Node root, NormalizedProblem p)
+    {
+        if (p.Policy is null) return; // nothing is keepable, so no way of cutting the L is better
+        for (int pass = 0; pass < 4; pass++)
+        {
+            bool changed = false;
+            var order = Node.PreOrder(root).ToList();
+            for (int i = order.Count - 1; i >= 0; i--)
+            {
+                var n = order[i];
+                // The L: n is cut one way, its first part is cut the other way, and both second parts are leftovers.
+                if (n.A is not { A: not null } first || n.B is not { IsFree: true, Surplus: false } outer) continue;
+                if (first.Axis == n.Axis || first.B is not { IsFree: true, Surplus: false } inner) continue;
+                var block = first.A!;
+                Rect r = n.R, b = block.R;
+                Rect altInner, altOuter;
+                if (n.Axis == CutAxis.Horizontal)
+                {
+                    // Now: across at b.Bottom, then along at b.Right. Alternative: along first.
+                    altInner = new Rect(r.X, b.Bottom, b.W, r.Bottom - b.Bottom);
+                    altOuter = new Rect(b.Right, r.Y, r.Right - b.Right, r.H);
+                }
+                else
+                {
+                    altInner = new Rect(b.Right, r.Y, r.Right - b.Right, b.H);
+                    altOuter = new Rect(r.X, b.Bottom, r.W, r.Bottom - b.Bottom);
+                }
+
+                if (!Better(altInner, altOuter, inner.R, outer.R, p)) continue;
+                var newAxis = n.Axis == CutAxis.Horizontal ? CutAxis.Vertical : CutAxis.Horizontal;
+                var newFirst = new Node(newAxis == CutAxis.Vertical ? new Rect(r.X, r.Y, b.W, r.H) : new Rect(r.X, r.Y, r.W, b.H), n)
+                {
+                    Axis = n.Axis,
+                    Pos = n.Axis == CutAxis.Horizontal ? b.Bottom : b.Right,
+                };
+                newFirst.A = block;
+                block.Parent = newFirst;
+                newFirst.B = new Node(altInner, newFirst);
+                n.Axis = newAxis;
+                n.Pos = newAxis == CutAxis.Vertical ? b.Right : b.Bottom;
+                n.A = newFirst;
+                n.B = new Node(altOuter, n);
+                changed = true;
+            }
+
+            if (!changed) return;
+        }
+    }
+
+    /// <summary>True when leftovers (a1, a2) are strictly better than (b1, b2): less scrap, then a bigger largest keepable piece.</summary>
+    private static bool Better(Rect a1, Rect a2, Rect b1, Rect b2, NormalizedProblem p)
+    {
+        (long Scrap, long Largest) Score(Rect x, Rect y)
+        {
+            bool ex = ResidualClassifier.Evaluate(x.W, x.H, p.Policy, p.Scale).Eligible;
+            bool ey = ResidualClassifier.Evaluate(y.W, y.H, p.Policy, p.Scale).Eligible;
+            return ((ex ? 0 : x.Area) + (ey ? 0 : y.Area), Math.Max(ex ? x.Area : 0, ey ? y.Area : 0));
+        }
+
+        var a = Score(a1, a2);
+        var b = Score(b1, b2);
+        return a.Scrap < b.Scrap || (a.Scrap == b.Scrap && a.Largest > b.Largest);
     }
 
     /// <summary>Clips a roll tree to <c>y &lt; c</c>. Horizontal cuts at or beyond <paramref name="c"/> collapse onto their top child.</summary>

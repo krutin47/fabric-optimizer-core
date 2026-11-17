@@ -98,8 +98,13 @@ internal static class Construction
         return true;
     }
 
-    /// <summary>Most candidate section lengths tried per new section (shortest first).</summary>
-    private const int MaxSectionCandidates = 32;
+    /// <summary>
+    /// Effort per new section, by how many pieces are still to place: how many candidate lengths are tried (shortest
+    /// first) and how many pending pieces are packed on a scratch section to score it (largest first). Small jobs get
+    /// the full effort; on large jobs many pieces fill the gaps anyway and the effort is better spent on more layouts.
+    /// </summary>
+    private static (int Candidates, int FillPieces) SectionEffort(int pending) =>
+        pending <= 60 ? (32, 64) : pending <= 150 ? (12, 40) : (6, 24);
 
     /// <summary>
     /// Row sections. A piece that opens a new section of the roll normally makes the section exactly as long as
@@ -119,48 +124,71 @@ internal static class Construction
         var p = st.P;
         var spec = st.Layouts[layout].Spec;
         long w = spec.W, room = leaf.R.H;
-        var pending = new List<int>();
-        for (int i = 0; i < p.Instances.Length; i++)
-            if (i != inst && st.NodeOf[i] is null) pending.Add(i);
-        if (pending.Count == 0) return o.H;
-        pending.Sort((a, b) =>
-        {
-            int c = p.TypeOf(b).FootArea.CompareTo(p.TypeOf(a).FootArea);
-            return c != 0 ? c : a.CompareTo(b);
-        });
 
-        // Rows: n copies of one type side by side along the roll (the opening piece counts for its own type).
-        long longest = o.H;
-        var copies = new Dictionary<int, int> { [p.Instances[inst].Type] = 1 };
-        foreach (int i in pending)
+        // Copies still to place per piece type (the opening piece counts for its own type).
+        int typeCount = p.Types.Length;
+        Span<int> copies = typeCount <= 512 ? stackalloc int[typeCount] : new int[typeCount];
+        copies.Clear();
+        int pendingCount = 0;
+        for (int i = 0; i < p.Instances.Length; i++)
         {
-            int ty = p.Instances[i].Type;
-            copies[ty] = copies.GetValueOrDefault(ty) + 1;
+            if (i == inst || st.NodeOf[i] is not null) continue;
+            copies[p.Instances[i].Type]++;
+            pendingCount++;
+        }
+
+        if (pendingCount == 0) return o.H;
+        var (maxCandidates, maxFill) = SectionEffort(pendingCount);
+
+        // Only the largest pending pieces are ever packed on the scratch section.
+        var pending = new List<int>(Math.Min(pendingCount, maxFill));
+        foreach (int i in p.InstancesByAreaDesc)
+        {
+            if (i == inst || st.NodeOf[i] is not null) continue;
+            pending.Add(i);
+            if (pending.Count >= maxFill) break;
+        }
+
+        long longest = o.H;
+        for (int ty = 0; ty < typeCount; ty++)
+        {
+            if (copies[ty] == 0) continue;
             foreach (var po in p.Types[ty].For(spec.Axis))
                 if (po.W <= w) longest = Math.Max(longest, po.H);
         }
 
+        // Rows: k copies of one type side by side along the roll. Keep the shortest distinct lengths above the
+        // opening piece's own length, up to twice the longest pending piece.
+        copies[p.Instances[inst].Type]++;
         long cap = Math.Min(room, 2 * longest);
-        var lengths = new SortedSet<long>();
-        foreach (var (ty, n) in copies.OrderBy(kv => kv.Key))
+        Span<long> lengths = stackalloc long[maxCandidates];
+        int n = 0;
+        for (int ty = 0; ty < typeCount; ty++)
+        {
+            if (copies[ty] == 0) continue;
             foreach (var po in p.Types[ty].For(spec.Axis))
             {
                 if (po.W > w) continue;
-                for (int k = 1; k <= n; k++)
+                for (long k = o.H / po.H + 1; k <= copies[ty]; k++)
                 {
                     long len = k * po.H;
-                    if (len > cap) break;
-                    if (len > o.H) lengths.Add(len);
+                    if (len > cap || (n == maxCandidates && len >= lengths[n - 1])) break;
+                    int at = 0;
+                    while (at < n && lengths[at] < len) at++;
+                    if (at < n && lengths[at] == len) continue;
+                    if (n < maxCandidates) n++;
+                    for (int j = n - 1; j > at; j--) lengths[j] = lengths[j - 1];
+                    lengths[at] = len;
                 }
             }
+        }
 
         long best = o.H;
-        long bestFill = SectionFill(p, spec, o, o.H, pending);
-        int tried = 0;
-        foreach (long len in lengths)
+        long bestFill = SectionFill(p, spec, o, o.H, pending, maxFill);
+        for (int i = 0; i < n; i++)
         {
-            if (++tried > MaxSectionCandidates) break;
-            long fill = SectionFill(p, spec, o, len, pending);
+            long len = lengths[i];
+            long fill = SectionFill(p, spec, o, len, pending, maxFill);
             // fill / (w × len) > bestFill / (w × best), compared without division.
             if ((Int128)fill * best > (Int128)bestFill * len)
             {
@@ -173,14 +201,16 @@ internal static class Construction
     }
 
     /// <summary>Piece area a scratch section of <paramref name="len"/> takes: opening piece first, then pending pieces greedily.</summary>
-    private static long SectionFill(NormalizedProblem p, SourceSpec spec, Orientation o, long len, List<int> pending)
+    private static long SectionFill(NormalizedProblem p, SourceSpec spec, Orientation o, long len, List<int> pending, int maxPieces)
     {
         var root = new Node(new Rect(0, 0, spec.W, len), null);
         var free = new List<Node>();
         Node.CarvePiece(root, o.W, o.H, horizontalFirst: false, free);
         long filled = o.W * o.H;
+        int examined = 0;
         foreach (int i in pending)
         {
+            if (free.Count == 0 || ++examined > maxPieces) break;
             Node? bestLeaf = null;
             Orientation bestO = default;
             long bestWaste = long.MaxValue;
@@ -307,6 +337,7 @@ internal static class Construction
             if (l.IsRoll) roll = l.Consumed;
             if (l.PieceCount == 0) continue;
             if (!l.IsRoll) opened += l.Spec.Area;
+            dead += l.DeadArea;
             foreach (var f in l.Free)
                 if (!l.IsFrontier(f) && IsDead(f.R, minArea, minSide))
                     dead += f.R.Area;

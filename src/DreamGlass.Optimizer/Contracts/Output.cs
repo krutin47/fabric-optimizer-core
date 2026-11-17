@@ -4,7 +4,21 @@ namespace DreamGlass.Optimizer.Contracts;
 public sealed record OptimizationResult
 {
     public string RunId { get; init; } = "";
+
+    /// <summary>SHA-256 of the canonical snapshot plus engine options (what would have to be equal to repeat the run).</summary>
     public string InputHash { get; init; } = "";
+
+    /// <summary>SHA-256 of the canonical snapshot alone; every candidate carries the same value.</summary>
+    public string SnapshotHash { get; init; } = "";
+
+    public string? OrganizationId { get; init; }
+    public string? JobId { get; init; }
+    public string JobRevisionId { get; init; } = "";
+    public DateTimeOffset StartedAtUtc { get; init; }
+    public DateTimeOffset CompletedAtUtc { get; init; }
+
+    /// <summary>Where the run executed (runtime, operating system, processor count). No machine or user names.</summary>
+    public RuntimeContext Runtime { get; init; } = new();
     public int SchemaVersion { get; init; }
     public string SolverVersion { get; init; } = "";
     public string ObjectiveVersion { get; init; } = "";
@@ -23,6 +37,15 @@ public sealed record OptimizationResult
     public RunDiagnostics Diagnostics { get; init; } = new();
     public IReadOnlyList<InputError> InputErrors { get; init; } = [];
     public IReadOnlyList<CandidateCutPlan> Candidates { get; init; } = [];
+}
+
+/// <summary>Non-identifying execution context, recorded so timings and results can be compared (handbook §33).</summary>
+public sealed record RuntimeContext
+{
+    public string Framework { get; init; } = "";
+    public string OperatingSystem { get; init; } = "";
+    public string Architecture { get; init; } = "";
+    public int ProcessorCount { get; init; }
 }
 
 /// <summary>Structured input error with a field path and remediation (spec §3.7).</summary>
@@ -46,13 +69,35 @@ public sealed record RunDiagnostics
     public bool Reproducible { get; init; }
 
     public IReadOnlyList<PhaseTiming> Phases { get; init; } = [];
+
+    /// <summary>Where the search time went (ms): building layouts, turning them into plans, independent validation.</summary>
+    public long ConstructionMs { get; init; }
+    public long AssemblyMs { get; init; }
+    public long ValidationMs { get; init; }
     public ExactSolveReport? Exact { get; init; }
     public decimal? PurchasedAreaLowerBoundM2 { get; init; }
     public string? PurchasedAreaLowerBoundMethod { get; init; }
 
+    /// <summary>Layouts skipped before validation because the same layout had already been seen.</summary>
+    public int DuplicateLayoutsSkipped { get; init; }
+
+    /// <summary>Layouts skipped before validation because they could not improve on the plans already kept.</summary>
+    public int UncompetitiveLayoutsSkipped { get; init; }
+
+    public decimal? PurchaseCostLowerBound { get; init; }
+    public string? PurchaseCostLowerBoundMethod { get; init; }
+
     /// <summary>First validator rejection messages (bounded), to surface generator bugs loudly.</summary>
     public IReadOnlyList<string> RejectionSamples { get; init; } = [];
+
+    /// <summary>
+    /// Plans the independent validator refused (bounded), each with its structured failures. They are never returned
+    /// as candidates; a non-empty list means the generator has a defect worth reporting.
+    /// </summary>
+    public IReadOnlyList<RejectedCandidate> RejectedCandidates { get; init; } = [];
 }
+
+public sealed record RejectedCandidate(string CandidateId, string Origin, IReadOnlyList<ValidationFailure> Failures);
 
 public sealed record PhaseTiming(string Phase, long ElapsedMs, int Iterations);
 
@@ -62,10 +107,16 @@ public sealed record ExactSolveReport
     public bool Completed { get; init; }
     public string Reason { get; init; } = "";
     public long StatesExplored { get; init; }
+
+    /// <summary>Splits examined (the exact solver's machine-independent unit of work).</summary>
+    public long WorkUnits { get; init; }
     public long ElapsedMs { get; init; }
 
     /// <summary>Proven minimum newly purchased area over all guillotine plans and source assignments (tier 1 only).</summary>
     public decimal? ProvenMinPurchasedAreaM2 { get; init; }
+
+    /// <summary>Proven minimum purchase cost over all guillotine plans, source assignments and roll offers.</summary>
+    public decimal? ProvenMinPurchaseCost { get; init; }
     public bool? ProvenInfeasible { get; init; }
 }
 
@@ -73,9 +124,22 @@ public sealed record ExactSolveReport
 public sealed record CandidateCutPlan
 {
     public string CandidateId { get; init; } = "";
+
+    /// <summary>
+    /// Hash of the snapshot this plan was computed from (<see cref="OptimizationResult.SnapshotHash"/>). The validator
+    /// refuses the plan against any other snapshot, so a plan for an edited job or changed stock cannot be approved.
+    /// </summary>
+    public string SnapshotHash { get; init; } = "";
+
+    public string JobRevisionId { get; init; } = "";
     public int Rank { get; init; }
     public QualityStatus QualityStatus { get; init; }
+
+    /// <summary>Bound on newly purchased area, when one is known.</summary>
     public ObjectiveBound? Bound { get; init; }
+
+    /// <summary>Bound on purchase cost, when one is known (the first tier of the cheapest-first ranking).</summary>
+    public ObjectiveBound? CostBound { get; init; }
     public IReadOnlyList<string> Tags { get; init; } = [];
     public IReadOnlyList<string> Warnings { get; init; } = [];
     public string Origin { get; init; } = "";
@@ -93,10 +157,22 @@ public sealed record CandidateCutPlan
 /// <summary>Objective bound with an explicit scope — never a claim about the whole lexicographic objective.</summary>
 public sealed record ObjectiveBound
 {
+    /// <summary>"PurchasedAreaM2" or "PurchaseCost".</summary>
+    public string Metric { get; init; } = "PurchasedAreaM2";
     public string Scope { get; init; } = "";
     public string Method { get; init; } = "";
+
+    /// <summary>Lower bound in the metric's unit (m² or currency). Kept under the historical name for area bounds.</summary>
     public decimal LowerBoundM2 { get; init; }
+
+    /// <summary>This plan's value minus the bound, in the metric's unit.</summary>
     public decimal GapM2 { get; init; }
+
+    /// <summary>Gap as a percentage of the lower bound (the denominator is the bound, not the plan); null when the bound is 0.</summary>
+    public decimal? GapPercentOfBound { get; init; }
+
+    /// <summary>True only when the bound comes from a completed exact search, not from a relaxation.</summary>
+    public bool Proven { get; init; }
     public string Note { get; init; } = "";
 }
 
@@ -104,15 +180,57 @@ public sealed record RectMm(decimal X, decimal Y, decimal Width, decimal Length)
 
 public sealed record DimensionsMm(decimal Width, decimal Length);
 
+/// <summary>
+/// Independent material and work metrics of one plan (handbook §32, §96). They are never folded into one "wastage %".
+/// The ledger always balances, and the validator re-derives every line:
+/// <list type="bullet">
+/// <item>new ordered + existing stock consumed = required + usable leftovers + scrap</item>
+/// <item>new ordered = new consumed + rounding surplus</item>
+/// <item>existing stock offered = existing stock consumed + existing stock untouched</item>
+/// </list>
+/// Handbook names: new_ordered_area = <see cref="PurchasedAreaM2"/>, new_consumed_area = <see cref="NewConsumedAreaM2"/>,
+/// existing_stock_consumed_area = <see cref="ExistingStockAreaConsumedM2"/>, existing_stock_untouched_area =
+/// <see cref="ExistingStockUntouchedAreaM2"/>, usable_predicted_remnant_area = <see cref="ReusableResidualAreaM2"/>,
+/// discarded_scrap_area = <see cref="UnusableScrapAreaM2"/>, rounded_surplus_area = <see cref="RoundingSurplusAreaM2"/>,
+/// purchase_cost = <see cref="PurchaseCost"/>, cut_count = <see cref="TotalCuts"/>, source_count =
+/// <see cref="SourcesUsed"/>, stock_depletion proxy = <see cref="StockDepletionAreaM2"/>.
+/// </summary>
 public sealed record PlanMetrics
 {
+    /// <summary>Padded cut-out area of every requested piece.</summary>
     public decimal RequiredCutAreaM2 { get; init; }
+
+    /// <summary>Newly ordered roll area: roll width × ordered whole-metre length.</summary>
     public decimal PurchasedAreaM2 { get; init; }
+
+    /// <summary>Part of the ordered roll the layout uses: roll width × the running length the layout needs.</summary>
+    public decimal NewConsumedAreaM2 { get; init; }
+
+    /// <summary>Full-width remainder created by ordering whole metres: roll width × (ordered − needed length).</summary>
+    public decimal RoundingSurplusAreaM2 { get; init; }
+
     public decimal PurchaseCost { get; init; }
     public string? Currency { get; init; }
+
+    /// <summary>Whole area of every warehouse piece the plan cuts into (a touched piece is committed entirely).</summary>
     public decimal ExistingStockAreaConsumedM2 { get; init; }
+
+    /// <summary>Area of offered warehouse pieces the plan leaves untouched. It stays in the warehouse; it is not waste.</summary>
+    public decimal ExistingStockUntouchedAreaM2 { get; init; }
+
+    /// <summary>
+    /// Warehouse area that does not come back as a keepable leftover: committed warehouse area minus the keepable
+    /// leftovers predicted on those pieces. A proxy until the owner decides how to value stock (ADR-015).
+    /// </summary>
+    public decimal StockDepletionAreaM2 { get; init; }
+
+    /// <summary>All leftover area, keepable or not.</summary>
     public decimal TotalResidualAreaM2 { get; init; }
+
+    /// <summary>Predicted leftovers big enough to keep (not inventory until confirmed after cutting).</summary>
     public decimal ReusableResidualAreaM2 { get; init; }
+
+    /// <summary>Leftovers too small to keep.</summary>
     public decimal UnusableScrapAreaM2 { get; init; }
     public int ReusableOffcutCount { get; init; }
     public IReadOnlyList<DimensionsMm> ReusableOffcuts { get; init; } = [];
@@ -159,9 +277,25 @@ public sealed record PurchaseLine
     public decimal RoundingSurplusMm { get; init; }
     public decimal PurchasedAreaM2 { get; init; }
     public decimal PricePerSquareMetre { get; init; }
+    /// <summary>Exact price: purchased area × price per m², not rounded (used for ranking).</summary>
     public decimal PurchaseCost { get; init; }
+
+    /// <summary><see cref="PurchaseCost"/> rounded for documents by <see cref="CostRounding"/>.</summary>
+    public decimal PurchaseCostRounded { get; init; }
+
+    /// <summary>The rounding rule applied to <see cref="PurchaseCostRounded"/>.</summary>
+    public string CostRounding { get; init; } = Money.RoundingRule;
+
     public string? Currency { get; init; }
     public bool FixedLength { get; init; }
+}
+
+/// <summary>Money presentation rule shared by the generator and the validator contract (handbook §15).</summary>
+public static class Money
+{
+    public const string RoundingRule = "half-up to 2 decimals";
+
+    public static decimal Round(decimal amount) => Math.Round(amount, 2, MidpointRounding.AwayFromZero);
 }
 
 public sealed record PlanSource
@@ -219,6 +353,12 @@ public sealed record Placement
 
     /// <summary>Resulting pattern direction on the finished panel (None for non-directional material).</summary>
     public PatternOrientation FinishedPatternDirection { get; init; }
+
+    /// <summary>The pattern direction the job asked for on this piece.</summary>
+    public PatternOrientation RequiredOrientation { get; init; }
+
+    /// <summary>Pattern axis of the source this piece is cut from, in the source's own (canonical) frame.</summary>
+    public PatternAxis SourcePatternAxis { get; init; }
 }
 
 /// <summary>Flat, id-linked cut tree (robust to deep trees; lets the validator detect cycles and orphans).</summary>

@@ -60,19 +60,4 @@ public static class PlanRanking
                       || a.ExistingStockAreaConsumedM2 < b.ExistingStockAreaConsumedM2;
         return noWorse && better;
     }
-
-    internal sealed class PlanComparer(ObjectivePolicy policy) : IComparer<CandidateCutPlan>
-    {
-        public int Compare(CandidateCutPlan? x, CandidateCutPlan? y)
-        {
-            if (ReferenceEquals(x, y)) return 0;
-            if (x is null) return 1;
-            if (y is null) return -1;
-            int r = PlanRanking.Compare(x.Metrics, y.Metrics, policy);
-            return r != 0 ? r : string.CompareOrdinal(x.CandidateId, y.CandidateId);
-        }
-    }
-
-    internal static string MetricKey(PlanMetrics m) =>
-        $"{m.PurchasedAreaM2}|{m.UnusableScrapAreaM2}|{m.LargestReusableAreaM2}|{m.PurchaseCost}|{m.TotalCuts}|{m.ExistingStockAreaConsumedM2}";
 }

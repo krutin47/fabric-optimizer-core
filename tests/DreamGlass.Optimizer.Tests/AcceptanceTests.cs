@@ -353,7 +353,14 @@ public class AcceptanceTests
         Assert.Equal(QualityStatus.BoundedGap, best.QualityStatus);
         Assert.Equal(0m, best.Bound!.GapM2);
         Assert.Equal("ExactGuillotineDP", best.Bound.Method);
-        Assert.Contains("Tier 1 only", best.Bound.Scope);
+        Assert.True(best.Bound.Proven);
+        Assert.Contains("Newly purchased area (m²) only", best.Bound.Scope);
+        // The approved ranking starts with price, so the quality label rests on the proven cost bound.
+        Assert.Equal(56m, r.Diagnostics.Exact.ProvenMinPurchaseCost);
+        Assert.Equal("PurchaseCost", best.CostBound!.Metric);
+        Assert.Equal(0m, best.CostBound.GapM2);
+        Assert.Equal(0m, best.CostBound.GapPercentOfBound);
+        Assert.Contains("Purchase cost only", best.CostBound.Scope);
     }
 
     [Fact]
@@ -440,7 +447,8 @@ public class AcceptanceTests
         Assert.Equal(64, approval.CandidateContentHash.Length);
 
         var forged = r with { Candidates = r.Candidates.Select(c => c == second ? c with { Metrics = c.Metrics with { TotalCuts = 0 } } : c).ToList() };
-        Assert.Throws<InvalidOperationException>(() => PlanSelection.Approve(forged, job, second.CandidateId, "emp-42", "x", now));
+        var refused = Assert.Throws<PlanApprovalException>(() => PlanSelection.Approve(forged, job, second.CandidateId, "emp-42", "x", now));
+        Assert.Equal("CANDIDATE_INVALID", refused.Code);
     }
 
     [Fact]

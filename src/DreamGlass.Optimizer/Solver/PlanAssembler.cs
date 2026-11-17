@@ -5,12 +5,31 @@ using DreamGlass.Optimizer.Normalization;
 
 namespace DreamGlass.Optimizer.Solver;
 
+/// <summary>128-bit structural identity of a finished layout (deterministic, so duplicate detection is reproducible).</summary>
+internal readonly record struct PlanKey(ulong A, ulong B);
+
+/// <summary>
+/// What the search needs to know about a finished layout before it is worth building and validating the full plan:
+/// its metrics (exactly the ones the plan will carry), its identity and its source group.
+/// </summary>
+internal sealed class PlanDigest
+{
+    public required PlanMetrics Metrics { get; init; }
+    public required PlanKey Key { get; init; }
+
+    /// <summary>"warehouse-only" or "roll:{offerId}".</summary>
+    public required string Group { get; init; }
+}
+
 /// <summary>
 /// Converts a <see cref="FinalPlan"/> into the output contract. All metrics are recomputed from the final trees
-/// (spec §6.7), never from heuristic counters.
+/// (spec §6.7), never from heuristic counters. <see cref="Digest"/> is the cheap first half (integers only, no
+/// strings); <see cref="Assemble(FinalPlan, PlanDigest)"/> builds the full plan for layouts that are worth validating.
 /// </summary>
 internal static class PlanAssembler
 {
+    public const string WarehouseGroup = "warehouse-only";
+
     /// <summary>
     /// Roll length attributable to padding for this arrangement: compact the cut tree along the roll (vertical cuts
     /// take the longer side, horizontal cuts stack, residuals take no length) once with padded footprints and once
@@ -44,7 +63,152 @@ internal static class PlanAssembler
         return padded - nominal;
     }
 
-    public static CandidateCutPlan Assemble(FinalPlan fp)
+    private static void Mix(ref ulong a, ref ulong b, ulong v)
+    {
+        unchecked
+        {
+            a = (a ^ v) * 0x9E3779B97F4A7C15UL;
+            a ^= a >> 29;
+            b = (b + v) * 0xC2B2AE3D27D4EB4FUL;
+            b ^= b >> 31;
+        }
+    }
+
+    /// <summary>
+    /// Metrics and identity of a finished layout in one integer pass over its trees. The metrics are the same object
+    /// the assembled plan carries, so ranking a digest and ranking the plan can never disagree.
+    /// </summary>
+    public static PlanDigest Digest(FinalPlan fp)
+    {
+        var p = fp.P;
+        long sc = p.Scale;
+        decimal Mm(long u) => Units.ToMm(u, sc);
+        decimal M2(long a) => Units.AreaToM2(a, sc);
+
+        long requiredArea = 0, purchasedArea = 0, stockArea = 0, residualArea = 0, reusableArea = 0, warehouseReusable = 0;
+        long largestResidualLeaf = 0, largestReusable = 0, rollWidth = 0;
+        long? minReusableDim = null, consumed = null, ordered = null;
+        int fragments = 0, thin = 0, cuts = 0, warehouseUsed = 0;
+        List<(long W, long H)>? offcuts = null;
+        decimal cost = 0;
+        string? currency = null;
+        string group = WarehouseGroup;
+        ulong ha = 0x243F6A8885A308D3UL, hb = 0x13198A2E03707344UL;
+        var stack = new Stack<Node>();
+
+        foreach (var fs in fp.Sources)
+        {
+            var spec = fs.Spec;
+            long srcArea = spec.W * fs.Length;
+            Mix(ref ha, ref hb, (ulong)spec.Index + 1);
+            Mix(ref ha, ref hb, (ulong)fs.Length);
+            if (spec.IsRoll)
+            {
+                purchasedArea += srcArea;
+                consumed = fs.Consumed;
+                ordered = fs.OrderedLength;
+                rollWidth = spec.W;
+                currency = spec.Offer!.Currency;
+                cost = M2(srcArea) * spec.Offer.PricePerSquareMetre;
+                group = spec.Group;
+            }
+            else
+            {
+                stockArea += srcArea;
+                warehouseUsed++;
+            }
+
+            stack.Push(fs.Root);
+            while (stack.Count > 0)
+            {
+                var node = stack.Pop();
+                var r = node.R;
+                if (node.A is not null)
+                {
+                    cuts++;
+                    Mix(ref ha, ref hb, node.Axis == CutAxis.Vertical ? 1UL : 2UL);
+                    Mix(ref ha, ref hb, (ulong)node.Pos);
+                    stack.Push(node.B!);
+                    stack.Push(node.A);
+                }
+                else if (node.Piece >= 0)
+                {
+                    requiredArea += r.Area;
+                    // Identical pieces are interchangeable: identity uses the piece type, not the instance.
+                    Mix(ref ha, ref hb, 8UL + ((ulong)p.Instances[node.Piece].Type << 1) + (fp.Rotated[node.Piece] ? 1UL : 0UL));
+                    Mix(ref ha, ref hb, (ulong)r.X);
+                    Mix(ref ha, ref hb, (ulong)r.Y);
+                }
+                else
+                {
+                    long a = r.Area;
+                    residualArea += a;
+                    fragments++;
+                    largestResidualLeaf = Math.Max(largestResidualLeaf, a);
+                    var (eligible, isThin) = ResidualClassifier.Evaluate(r.W, r.H, p.Policy, sc);
+                    if (isThin) thin++;
+                    if (eligible)
+                    {
+                        reusableArea += a;
+                        if (!spec.IsRoll) warehouseReusable += a;
+                        largestReusable = Math.Max(largestReusable, a);
+                        long shortSide = Math.Min(r.W, r.H);
+                        minReusableDim = minReusableDim is long m ? Math.Min(m, shortSide) : shortSide;
+                        (offcuts ??= []).Add((r.W, r.H));
+                    }
+
+                    Mix(ref ha, ref hb, node.Surplus ? 5UL : 4UL);
+                }
+            }
+        }
+
+        if (requiredArea + residualArea != purchasedArea + stockArea)
+            throw new InvalidOperationException("Area conservation violated while assembling a plan.");
+
+        offcuts?.Sort((a, b) =>
+        {
+            int c = (b.W * b.H).CompareTo(a.W * a.H);
+            if (c != 0) return c;
+            c = b.W.CompareTo(a.W);
+            return c != 0 ? c : b.H.CompareTo(a.H);
+        });
+        long surplus = ordered is long ou && consumed is long cu ? ou - cu : 0;
+        var metrics = new PlanMetrics
+        {
+            RequiredCutAreaM2 = M2(requiredArea),
+            PurchasedAreaM2 = M2(purchasedArea),
+            NewConsumedAreaM2 = consumed is long c1 ? M2(rollWidth * c1) : 0,
+            RoundingSurplusAreaM2 = M2(rollWidth * surplus),
+            PurchaseCost = cost,
+            Currency = currency,
+            ExistingStockAreaConsumedM2 = M2(stockArea),
+            ExistingStockUntouchedAreaM2 = M2(p.TotalRemnantArea - stockArea),
+            StockDepletionAreaM2 = M2(stockArea - warehouseReusable),
+            TotalResidualAreaM2 = M2(residualArea),
+            ReusableResidualAreaM2 = M2(reusableArea),
+            UnusableScrapAreaM2 = M2(residualArea - reusableArea),
+            ReusableOffcutCount = offcuts?.Count ?? 0,
+            ReusableOffcuts = offcuts is null ? [] : offcuts.ConvertAll(o => new DimensionsMm(Mm(o.W), Mm(o.H))),
+            LargestReusableAreaM2 = M2(largestReusable),
+            MinReusableDimensionMm = minReusableDim is long d ? Mm(d) : null,
+            FragmentCount = fragments,
+            ThinFragmentCount = thin,
+            FragmentationIndex = residualArea == 0 ? 0 : Math.Round(1m - (decimal)largestResidualLeaf / residualArea, 6),
+            ConsumedLengthMm = consumed is long c2 ? Mm(c2) : null,
+            OrderedLengthMetres = ordered is long o2 ? (decimal)o2 / Units.MetreUnits(sc) : null,
+            RoundingSurplusMm = ordered is null ? null : Mm(surplus),
+            TotalCuts = cuts,
+            SourcesUsed = fp.Sources.Count,
+            WarehouseSourcesUsed = warehouseUsed,
+            MaterialUtilization = Math.Round((decimal)requiredArea / (purchasedArea + stockArea), 6),
+        };
+
+        return new PlanDigest { Metrics = metrics, Key = new PlanKey(ha, hb), Group = group };
+    }
+
+    public static CandidateCutPlan Assemble(FinalPlan fp) => Assemble(fp, Digest(fp));
+
+    public static CandidateCutPlan Assemble(FinalPlan fp, PlanDigest digest)
     {
         var p = fp.P;
         long sc = p.Scale;
@@ -52,25 +216,17 @@ internal static class PlanAssembler
         decimal M2(long a) => Units.AreaToM2(a, sc);
         RectMm R(Rect r) => new(Mm(r.X), Mm(r.Y), Mm(r.W), Mm(r.H));
 
-        var sources = new List<PlanSource>();
-        var trees = new List<SourceCutTree>();
+        var sources = new List<PlanSource>(fp.Sources.Count);
+        var trees = new List<SourceCutTree>(fp.Sources.Count);
         var steps = new List<CutStep>();
         var residuals = new List<PredictedResidual>();
-        var placements = new List<Placement>();
+        var placements = new List<(int Source, Rect R, Placement Dto)>(p.Instances.Length);
         var canonical = new StringBuilder();
-
-        long requiredArea = 0, purchasedArea = 0, stockArea = 0, residualArea = 0, reusableArea = 0;
-        long largestResidualLeaf = 0, largestReusable = 0;
-        long? minReusableDim = null;
-        int fragments = 0, thin = 0, cuts = 0, warehouseUsed = 0;
-        var offcuts = new List<(long W, long H)>();
         PurchaseLine? purchase = null;
-        decimal cost = 0;
-        string? currency = null;
-        long? consumed = null, ordered = null, surplus = null;
 
-        foreach (var fs in fp.Sources)
+        for (int si = 0; si < fp.Sources.Count; si++)
         {
+            var fs = fp.Sources[si];
             var spec = fs.Spec;
             // Every sheet is drawn with its length left to right, so display width = length and display length = width.
             const int displayRot = OrientationRules.SheetDisplayRotationDegrees;
@@ -95,38 +251,30 @@ internal static class PlanAssembler
 
             if (spec.IsRoll)
             {
-                purchasedArea += srcArea;
-                consumed = fs.Consumed;
-                ordered = fs.OrderedLength;
-                surplus = fs.Length - fs.Consumed;
                 var offer = spec.Offer!;
-                currency = offer.Currency;
-                cost = M2(srcArea) * offer.PricePerSquareMetre;
+                decimal cost = M2(srcArea) * offer.PricePerSquareMetre;
+                long paddingLength = PaddingLength(fs.Root, p, fp.Rotated);
                 purchase = new PurchaseLine
                 {
                     RollOfferId = offer.OfferId,
                     OrderedWidthMm = Mm(spec.W),
                     OrderedLengthMetres = (decimal)fs.Length / spec.MetreUnits,
                     ConsumedLengthMm = Mm(fs.Consumed),
-                    PaddingLengthMm = Mm(PaddingLength(fs.Root, p, fp.Rotated)),
-                    LengthWithoutPaddingMm = Mm(fs.Consumed - PaddingLength(fs.Root, p, fp.Rotated)),
+                    PaddingLengthMm = Mm(paddingLength),
+                    LengthWithoutPaddingMm = Mm(fs.Consumed - paddingLength),
                     RoundingSurplusMm = Mm(fs.Length - fs.Consumed),
                     PurchasedAreaM2 = M2(srcArea),
                     PricePerSquareMetre = offer.PricePerSquareMetre,
                     PurchaseCost = cost,
+                    PurchaseCostRounded = Money.Round(cost),
                     Currency = offer.Currency,
                     FixedLength = spec.FixedLengthUnits is not null,
                 };
             }
-            else
-            {
-                stockArea += srcArea;
-                warehouseUsed++;
-            }
 
-            var nodes = new List<CutTreeNode>();
             var order = Node.PreOrder(fs.Root).ToList();
-            var ids = new Dictionary<Node, string>(ReferenceEqualityComparer.Instance);
+            var nodes = new List<CutTreeNode>(order.Count);
+            var ids = new Dictionary<Node, string>(order.Count, ReferenceEqualityComparer.Instance);
             for (int k = 0; k < order.Count; k++) ids[order[k]] = $"{spec.SourceId}/n{k + 1}";
             int residualSeq = 0;
             foreach (var node in order)
@@ -134,7 +282,6 @@ internal static class PlanAssembler
                 var r = node.R;
                 if (node.A is not null)
                 {
-                    cuts++;
                     bool vertical = node.Axis == CutAxis.Vertical;
                     nodes.Add(new CutTreeNode
                     {
@@ -171,10 +318,9 @@ internal static class PlanAssembler
                     long srcLeft = rot ? t.PadB : t.PadL;
                     long nomX = rot ? t.NomL : t.NomW;
                     long nomY = rot ? t.NomW : t.NomL;
-                    requiredArea += r.Area;
                     string id = fp.InstanceIds[inst];
                     nodes.Add(new CutTreeNode { NodeId = ids[node], Kind = CutNodeKind.Piece, Region = R(r), PieceInstanceId = id });
-                    placements.Add(new Placement
+                    placements.Add((si, r, new Placement
                     {
                         PieceInstanceId = id,
                         PieceId = t.PieceId,
@@ -191,7 +337,9 @@ internal static class PlanAssembler
                         PieceRotationDegrees = rot ? 90 : 0,
                         SourceDisplayRotationDegrees = displayRot,
                         FinishedPatternDirection = p.Directional ? OrientationRules.FinishedDirection(spec.Axis, rot) : PatternOrientation.None,
-                    });
+                        RequiredOrientation = t.Required,
+                        SourcePatternAxis = spec.Axis,
+                    }));
                     canonical.Append('P').Append(id).Append('@').Append(r.X).Append(',').Append(r.Y).Append(rot ? 'r' : 'u').Append(',');
                 }
                 else
@@ -199,27 +347,13 @@ internal static class PlanAssembler
                     residualSeq++;
                     string rid = $"{spec.SourceId}/r{residualSeq}";
                     var cls = ResidualClassifier.Classify(r.W, r.H, p.Policy, sc);
-                    long a = r.Area;
-                    residualArea += a;
-                    fragments++;
-                    if (cls.Thin) thin++;
-                    largestResidualLeaf = Math.Max(largestResidualLeaf, a);
-                    if (cls.Eligible)
-                    {
-                        reusableArea += a;
-                        largestReusable = Math.Max(largestReusable, a);
-                        long shortSide = Math.Min(r.W, r.H);
-                        minReusableDim = minReusableDim is long m ? Math.Min(m, shortSide) : shortSide;
-                        offcuts.Add((r.W, r.H));
-                    }
-
                     nodes.Add(new CutTreeNode { NodeId = ids[node], Kind = CutNodeKind.Residual, Region = R(r), ResidualId = rid });
                     residuals.Add(new PredictedResidual
                     {
                         ResidualId = rid,
                         SourceId = spec.SourceId,
                         Region = R(r),
-                        AreaM2 = M2(a),
+                        AreaM2 = M2(r.Area),
                         Eligible = cls.Eligible,
                         Reason = cls.Reason,
                         RoundingSurplus = node.Surplus,
@@ -231,60 +365,26 @@ internal static class PlanAssembler
             trees.Add(new SourceCutTree { SourceId = spec.SourceId, RootNodeId = ids[fs.Root], Nodes = nodes });
         }
 
-        if (requiredArea + residualArea != purchasedArea + stockArea)
-            throw new InvalidOperationException("Area conservation violated while assembling a plan.");
-
         placements.Sort((a, b) =>
         {
-            int c = sources.FindIndex(s => s.SourceId == a.SourceId).CompareTo(sources.FindIndex(s => s.SourceId == b.SourceId));
+            int c = a.Source.CompareTo(b.Source);
             if (c != 0) return c;
-            c = a.Footprint.Y.CompareTo(b.Footprint.Y);
-            return c != 0 ? c : a.Footprint.X.CompareTo(b.Footprint.X);
+            c = a.R.Y.CompareTo(b.R.Y);
+            return c != 0 ? c : a.R.X.CompareTo(b.R.X);
         });
-
-        offcuts.Sort((a, b) =>
-        {
-            int c = (b.W * b.H).CompareTo(a.W * a.H);
-            if (c != 0) return c;
-            c = b.W.CompareTo(a.W);
-            return c != 0 ? c : b.H.CompareTo(a.H);
-        });
-        var metrics = new PlanMetrics
-        {
-            RequiredCutAreaM2 = M2(requiredArea),
-            PurchasedAreaM2 = M2(purchasedArea),
-            PurchaseCost = cost,
-            Currency = currency,
-            ExistingStockAreaConsumedM2 = M2(stockArea),
-            TotalResidualAreaM2 = M2(residualArea),
-            ReusableResidualAreaM2 = M2(reusableArea),
-            UnusableScrapAreaM2 = M2(residualArea - reusableArea),
-            ReusableOffcutCount = offcuts.Count,
-            ReusableOffcuts = offcuts.Select(o => new DimensionsMm(Mm(o.W), Mm(o.H))).ToList(),
-            LargestReusableAreaM2 = M2(largestReusable),
-            MinReusableDimensionMm = minReusableDim is long d ? Mm(d) : null,
-            FragmentCount = fragments,
-            ThinFragmentCount = thin,
-            FragmentationIndex = residualArea == 0 ? 0 : Math.Round(1m - (decimal)largestResidualLeaf / residualArea, 6),
-            ConsumedLengthMm = consumed is long cu ? Mm(cu) : null,
-            OrderedLengthMetres = ordered is long ou ? (decimal)ou / Units.MetreUnits(sc) : null,
-            RoundingSurplusMm = surplus is long su ? Mm(su) : null,
-            TotalCuts = cuts,
-            SourcesUsed = fp.Sources.Count,
-            WarehouseSourcesUsed = warehouseUsed,
-            MaterialUtilization = Math.Round((decimal)requiredArea / (purchasedArea + stockArea), 6),
-        };
 
         string candidateId = "C-" + OptimizerJson.Sha256Hex(canonical.ToString())[..16];
         return new CandidateCutPlan
         {
             CandidateId = candidateId,
+            SnapshotHash = p.SnapshotHash,
+            JobRevisionId = p.Snapshot.JobRevisionId ?? "",
             Origin = fp.Origin,
-            Metrics = metrics,
+            Metrics = digest.Metrics,
             RequiresPurchase = purchase is not null,
             Purchase = purchase,
             Sources = sources,
-            Placements = placements,
+            Placements = placements.ConvertAll(x => x.Dto),
             CutTrees = trees,
             CutSteps = steps,
             PredictedResiduals = residuals,

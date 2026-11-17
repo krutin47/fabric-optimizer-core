@@ -252,7 +252,15 @@ public static class InputValidator
 
                 if (!st.Available)
                 {
-                    Error("STOCK_UNAVAILABLE", path + ".available", $"Remnant '{st.StockId}' is not confirmed/available (reserved, excluded or consumed).", "Remove it from the snapshot or refresh inventory.");
+                    Error("STOCK_UNAVAILABLE", path + ".available", $"Remnant '{st.StockId}' is not confirmed/available (reserved, excluded or consumed).", "Remove it from the snapshot or refresh inventory; list it under excludedStock with the reason if the record should show it.");
+                    ok = false;
+                }
+
+                // The organisation comes from the host's verified identity. A stock row from any other organisation
+                // (or with none, when the job has one) must never reach the search.
+                if (!string.Equals(st.OrganizationId, s.OrganizationId, StringComparison.Ordinal))
+                {
+                    Error("STOCK_ORGANIZATION_MISMATCH", path + ".organizationId", $"Remnant '{st.StockId}' does not belong to this job's organisation.", "Offer only warehouse stock of the organisation that owns the job.");
                     ok = false;
                 }
 
@@ -267,7 +275,39 @@ public static class InputValidator
                 if (ok) result.Add(new StockInfo(i, st, w, len));
             }
 
+            CheckExcludedStock(s, ids);
             return result;
+        }
+
+        private void CheckExcludedStock(OptimizationSnapshot s, HashSet<string> offeredIds)
+        {
+            if (s.ExcludedStock is null)
+            {
+                Error("EXCLUDED_STOCK_NULL", "$.excludedStock", "excludedStock is null.", "Send an empty list when nothing was left out.");
+                return;
+            }
+
+            if (s.ExcludedStock.Count > _limits.MaxStockItems)
+                Error("STOCK_LIMIT", "$.excludedStock", $"{s.ExcludedStock.Count} excluded remnants exceed the limit of {_limits.MaxStockItems}.", "List only the remnants that matter to this job.");
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < s.ExcludedStock.Count; i++)
+            {
+                string path = $"$.excludedStock[{i}]";
+                var ex = s.ExcludedStock[i];
+                if (ex is null || string.IsNullOrWhiteSpace(ex.StockId))
+                {
+                    Error("STOCK_ID_MISSING", path + ".stockId", "stockId is required.", "Reference the physical remnant that was left out.");
+                    continue;
+                }
+
+                if (!seen.Add(ex.StockId))
+                    Error("STOCK_ID_DUPLICATE", path + ".stockId", $"Remnant '{ex.StockId}' is listed as excluded more than once.", "List each excluded remnant once.");
+                if (offeredIds.Contains(ex.StockId))
+                    Error("STOCK_EXCLUDED_AND_OFFERED", path + ".stockId", $"Remnant '{ex.StockId}' is both offered and excluded.", "Either offer the remnant or exclude it, not both.");
+                if (string.IsNullOrWhiteSpace(ex.Reason))
+                    Error("EXCLUSION_REASON_MISSING", path + ".reason", $"Remnant '{ex.StockId}' is excluded without a reason.", "Say why it was left out (damaged, held, reserved, planner's note).");
+            }
         }
 
         internal sealed record OfferInfo(int Index, RollOffer Offer, long W, long? MaxLen, long? FixedLen);

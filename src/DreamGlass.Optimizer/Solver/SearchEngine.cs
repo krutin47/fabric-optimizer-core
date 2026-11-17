@@ -8,7 +8,23 @@ using DreamGlass.Optimizer.Validation;
 namespace DreamGlass.Optimizer.Solver;
 
 /// <summary>A choice of physical sources to search over: warehouse only, joint stock + one roll offer, or roll only.</summary>
-internal sealed record SourceConfig(string Name, int[] Sources, bool HasRoll, bool HasRemnants);
+internal sealed class SourceConfig(string name, int[] sources, bool hasRoll, bool hasRemnants, long boundArea, decimal boundCost)
+{
+    public string Name { get; } = name;
+    public int[] Sources { get; } = sources;
+    public bool HasRoll { get; } = hasRoll;
+    public bool HasRemnants { get; } = hasRemnants;
+
+    /// <summary>Least area and cost any plan of this configuration must buy (a relaxation; 0 for warehouse-only).</summary>
+    public long BoundArea { get; } = boundArea;
+    public decimal BoundCost { get; } = boundCost;
+
+    public int Attempts { get; set; }
+    public int Completes { get; set; }
+
+    /// <summary>Enough tries without a single complete layout: stop spending the budget here.</summary>
+    public bool GaveUp => Completes == 0 && Attempts >= 12;
+}
 
 internal enum DestroyOp
 {
@@ -21,10 +37,16 @@ internal enum DestroyOp
 }
 
 /// <summary>
-/// Hybrid time-bounded search (spec §6): exact small-case DP → deterministic multi-start construction over source
-/// configurations, orderings, assignment strategies, fit and split rules → seeded random restarts → beam search →
-/// destroy-and-repair improvement. Every complete plan is finalised and passed through the independent validator
-/// before it may enter the incumbent pool.
+/// Hybrid time-bounded search (spec §6, handbook §33): exact small-case DP → deterministic multi-start construction
+/// over source configurations, orderings, assignment strategies, fit and split rules → seeded random restarts → beam
+/// search → destroy-and-repair improvement.
+/// <para>
+/// Every finished layout is reduced to its metrics and a structural key (<see cref="PlanAssembler.Digest"/>).
+/// Layouts already seen, and layouts that could not earn a place among the kept ones, stop there. A kept layout is
+/// built into a full plan and passed through the independent validator before it can be returned
+/// (<see cref="Materialize(PoolEntry)"/>): at the final selection, or as soon as it is kept when
+/// <see cref="OptimizationOptions.ValidateEveryKeptPlan"/> is set. Nothing unvalidated ever leaves the engine.
+/// </para>
 /// </summary>
 internal sealed class SearchEngine
 {
@@ -38,24 +60,37 @@ internal sealed class SearchEngine
         (FitRule.BestShortSideFit, SplitRule.VerticalFirst),
     ];
 
+    /// <summary>Structural keys remembered for duplicate detection; cleared when full (correctness never depends on it).</summary>
+    private const int MaxSeenLayouts = 400_000;
+    private const int MaxRejectedKept = 10;
+
     private readonly NormalizedProblem _p;
     private readonly OptimizationOptions _opt;
     private readonly SearchBudget _budget;
     private readonly Rng _rng;
     private readonly CutPlanValidator _validator = new();
     private readonly List<SourceConfig> _configs = [];
+    private readonly HashSet<PlanKey> _seen = [];
 
     public CandidatePool Pool { get; }
     public int Constructions { get; private set; }
     public int CompletePlans { get; private set; }
     public int Validated { get; private set; }
     public int Rejected { get; private set; }
+    public int DuplicatesSkipped { get; private set; }
+    public int UncompetitiveSkipped { get; private set; }
     public int BeamRuns { get; private set; }
     public int ImprovementIterations { get; private set; }
     public List<string> RejectionSamples { get; } = [];
+    public List<RejectedCandidate> RejectedCandidates { get; } = [];
     public List<PhaseTiming> Phases { get; } = [];
     public ExactOutcome? Exact { get; private set; }
     public StopReason Stop { get; private set; } = StopReason.NotStarted;
+
+    /// <summary>Stopwatch ticks spent building layouts, turning them into plans, and validating them.</summary>
+    public long ConstructTicks { get; private set; }
+    public long AssembleTicks { get; private set; }
+    public long ValidateTicks { get; private set; }
 
     public SearchEngine(NormalizedProblem p, OptimizationOptions opt, SearchBudget budget)
     {
@@ -63,7 +98,7 @@ internal sealed class SearchEngine
         _opt = opt;
         _budget = budget;
         _rng = new Rng(p.Snapshot.Search.Seed);
-        Pool = new CandidatePool(new PlanRanking.PlanComparer(opt.Objective), Math.Max(8, opt.PoolCapacity));
+        Pool = new CandidatePool(opt.Objective, opt.PoolCapacity);
     }
 
     public void Run()
@@ -91,16 +126,47 @@ internal sealed class SearchEngine
         return 1;
     });
 
+    /// <summary>
+    /// Source configurations worth searching. Left out: warehouse-only when the remnants are smaller than the job, and
+    /// any roll offer that cannot hold the pieces that must lie on it (too narrow, or over the supplier's length).
+    /// </summary>
     private void BuildConfigs()
     {
         var rem = _p.RemnantSources;
-        if (rem.Length > 0) _configs.Add(new SourceConfig("warehouse-only", rem, false, true));
+        if (rem.Length > 0 && _p.RequiredArea <= _p.TotalRemnantArea)
+            _configs.Add(new SourceConfig("warehouse-only", rem, false, true, 0, 0m));
+        var allPieces = _p.Instances.Select(i => _p.Types[i.Type]).ToList();
+        var (forced, needJoint) = Bounds.ForcedOntoRoll(_p);
         foreach (int r in _p.RollSources)
         {
-            string offer = _p.Sources[r].Offer!.OfferId;
-            if (rem.Length > 0) _configs.Add(new SourceConfig($"joint:{offer}", [.. rem, r], true, true));
-            _configs.Add(new SourceConfig($"roll-only:{offer}", [r], true, false));
+            var roll = _p.Sources[r];
+            string offer = roll.Offer!.OfferId;
+            if (rem.Length > 0 && Bounds.ForRoll(_p, roll, needJoint, forced) is var (ja, jc))
+                _configs.Add(new SourceConfig($"joint:{offer}", [.. rem, r], true, true, ja, jc));
+            if (Bounds.ForRoll(_p, roll, _p.RequiredArea, allPieces) is var (ra, rc))
+                _configs.Add(new SourceConfig($"roll-only:{offer}", [r], true, false, ra, rc));
         }
+    }
+
+    /// <summary>
+    /// True when no plan of this configuration can rank first: its cheapest possible purchase is already beaten on
+    /// the ranking's first tier. Its plans from the deterministic round stay available as alternatives.
+    /// </summary>
+    private bool Dominated(SourceConfig c)
+    {
+        if (Pool.Best is not { } best) return false;
+        return _opt.Objective.Tiers[0] switch
+        {
+            ObjectiveCriterion.PurchaseCost => c.BoundCost > best.Metrics.PurchaseCost,
+            ObjectiveCriterion.PurchasedArea => Units.AreaToM2(c.BoundArea, _p.Scale) > best.Metrics.PurchasedAreaM2,
+            _ => false,
+        };
+    }
+
+    private List<SourceConfig> LiveConfigs()
+    {
+        var live = _configs.Where(c => !c.GaveUp && !Dominated(c)).ToList();
+        return live.Count > 0 ? live : _configs.Where(c => !c.GaveUp).ToList();
     }
 
     private IReadOnlyList<SourceSpec> SourcesOf(SourceConfig c) => c.Sources.Select(i => _p.Sources[i]).ToList();
@@ -121,29 +187,64 @@ internal sealed class SearchEngine
         ],
     };
 
-    // ---- submission: finalise → assemble → independent validation → pool ------------------------------------
-    private (PoolEntry? Entry, bool NewBest) Submit(PackingState st)
+    // ---- submission: finalise → digest → (duplicate? competitive?) → keep; validation before anything is returned -----
+
+    /// <summary>
+    /// Outcome of submitting a layout. <see cref="Metrics"/> is set for every complete, non-rejected layout, also when
+    /// it was not kept, so the improvement phase can still walk through it.
+    /// </summary>
+    private readonly record struct Submission(PoolEntry? Entry, bool NewBest, PlanMetrics? Metrics);
+
+    private Submission Submit(PackingState st)
     {
+        long t0 = Stopwatch.GetTimestamp();
         var fp = Finalizer.Finalize(st);
-        if (fp is null) return (null, false);
+        if (fp is null) return default;
         CompletePlans++;
-        var plan = PlanAssembler.Assemble(fp);
-        if (Pool.Contains(plan.CandidateId)) return (null, false);
+        var digest = PlanAssembler.Digest(fp);
+        if (_seen.Count >= MaxSeenLayouts) _seen.Clear();
+        bool duplicate = !_seen.Add(digest.Key);
+        bool kept = !duplicate && Pool.Admits(digest.Metrics, digest.Group);
+        if (duplicate) DuplicatesSkipped++;
+        else if (!kept) UncompetitiveSkipped++;
+        AssembleTicks += Stopwatch.GetTimestamp() - t0;
+        if (!kept) return new Submission(null, false, digest.Metrics);
+
+        var entry = new PoolEntry { Digest = digest, State = st };
+        if (_opt.ValidateEveryKeptPlan && !Materialize(entry, fp)) return default;
+        var (added, newBest) = Pool.Add(entry);
+        return new Submission(added ? entry : null, newBest, digest.Metrics);
+    }
+
+    /// <summary>
+    /// Builds the full plan of a kept layout and passes it through the independent validator. Returns false, and
+    /// records the structured reasons, when the validator rejects it (a generator defect: the plan is never used).
+    /// </summary>
+    public bool Materialize(PoolEntry entry) => Materialize(entry, null);
+
+    private bool Materialize(PoolEntry entry, FinalPlan? fp)
+    {
+        if (entry.Plan is not null) return true;
+        long t0 = Stopwatch.GetTimestamp();
+        fp ??= Finalizer.Finalize(entry.State) ?? throw new InvalidOperationException("A kept layout could not be finalised again.");
+        var plan = PlanAssembler.Assemble(fp, entry.Digest);
+        long t1 = Stopwatch.GetTimestamp();
+        AssembleTicks += t1 - t0;
         var outcome = _validator.Validate(_p.Snapshot, plan);
+        ValidateTicks += Stopwatch.GetTimestamp() - t1;
         if (!outcome.Passed)
         {
             Rejected++;
             if (RejectionSamples.Count < 5)
-                RejectionSamples.Add($"{st.Origin}: " + string.Join("; ", outcome.Failures.Take(3).Select(f => $"{f.Code} {f.Message}")));
-            return (null, false);
+                RejectionSamples.Add($"{entry.State.Origin}: " + string.Join("; ", outcome.Failures.Take(3).Select(f => $"{f.Code} {f.Message}")));
+            if (RejectedCandidates.Count < MaxRejectedKept)
+                RejectedCandidates.Add(new RejectedCandidate(plan.CandidateId, entry.State.Origin, outcome.Failures.Take(10).ToList()));
+            return false;
         }
 
         Validated++;
-        plan = plan with { Validation = outcome };
-        string group = plan.Purchase is null ? "warehouse-only" : "roll:" + plan.Purchase.RollOfferId;
-        var entry = new PoolEntry { Plan = plan, State = st, Group = group };
-        var (added, newBest) = Pool.Add(entry);
-        return (added ? entry : null, newBest);
+        entry.Plan = plan with { Validation = outcome };
+        return true;
     }
 
     // ---- phase 0: exact --------------------------------------------------------------------------------------
@@ -154,6 +255,7 @@ internal sealed class SearchEngine
             : _budget.ElapsedMs + (long)(_budget.TimeBudgetMs * Math.Clamp(_opt.Exact.TimeShare, 0, 1));
         Exact = ExactGuillotineSolver.TrySolve(_p, _opt.Exact, _budget, deadline);
         if (Exact.Plan is { } plan) Submit(plan);
+        if (Exact.CostPlan is { } cheapest) Submit(cheapest);
     }
 
     // ---- phase 1: constructive multi-start -------------------------------------------------------------------
@@ -182,9 +284,9 @@ internal sealed class SearchEngine
             for (int ci = 0; ci < _configs.Count; ci++)
             {
                 if (_budget.Expired || _budget.Used >= 0.45) return iterations;
-                if (round >= perConfig[ci].Count) continue;
-                var (o, s, f, r) = perConfig[ci][round];
                 var c = _configs[ci];
+                if (round >= perConfig[ci].Count || c.GaveUp) continue;
+                var (o, s, f, r) = perConfig[ci][round];
                 var (tiers, open) = Strategies(c)[s];
                 var pol = new PlacementPolicy(tiers, open, FitSplits[f].Fit, FitSplits[f].Split, RandomTies: false, Rows: r == 1);
                 var order = PieceOrdering.Build(_p, all, PieceOrdering.Deterministic[o], SourcesOf(c), null, 0);
@@ -193,11 +295,14 @@ internal sealed class SearchEngine
             }
         }
 
-        // Seeded random restarts until the phase share is used or they stop paying off.
+        // Seeded random restarts on the configurations that can still rank first, until the phase share is used or
+        // they stop paying off.
         int stale = 0;
         while (!_budget.Expired && _budget.Used < 0.45 && stale < Math.Max(50, _opt.StagnationLimit / 3))
         {
-            var c = _configs[_rng.Next(_configs.Count)];
+            var live = LiveConfigs();
+            if (live.Count == 0) break;
+            var c = live[_rng.Next(live.Count)];
             var kind = _rng.NextDouble() < 0.25 ? OrderKind.Random : PieceOrdering.Deterministic[_rng.Next(PieceOrdering.Deterministic.Length)];
             var order = PieceOrdering.Build(_p, all, kind, SourcesOf(c), _rng, 0.05 + 0.3 * _rng.NextDouble());
             var pol = RandomPolicy(c.HasRoll);
@@ -212,11 +317,17 @@ internal sealed class SearchEngine
     private bool ConstructAndSubmit(SourceConfig c, int[] order, PlacementPolicy pol, string origin)
     {
         Constructions++;
+        c.Attempts++;
         _budget.Spend();
         var st = PackingState.Create(_p, c.Sources, c.Name);
         st.Origin = origin;
-        if (!Construction.PlaceAll(st, order, pol, _rng)) return false;
-        return Submit(st).NewBest;
+        long t0 = Stopwatch.GetTimestamp();
+        bool placed = Construction.PlaceAll(st, order, pol, _rng);
+        ConstructTicks += Stopwatch.GetTimestamp() - t0;
+        if (!placed) return false;
+        var sub = Submit(st);
+        if (sub.Metrics is not null) c.Completes++;
+        return sub.NewBest;
     }
 
     private PlacementPolicy RandomPolicy(bool hasRoll)
@@ -235,18 +346,15 @@ internal sealed class SearchEngine
         if (_p.Instances.Length > 400 || _opt.BeamWidth < 2) return 0;
         int runs = 0;
         var all = Enumerable.Range(0, _p.Instances.Length).ToArray();
-        // Most promising configurations first (by their best verified plan), then the rest.
+        // Most promising configurations first (by their best verified plan); configurations that never completed a
+        // layout or cannot rank first are skipped.
         var ranked = Pool.Sorted();
         var configOrder = _configs
+            .Where(c => c.Completes > 0 && !Dominated(c))
             .OrderBy(c =>
             {
-                int i = 0;
-                foreach (var e in ranked)
-                {
-                    if (e.State.Config == c.Name) return i;
-                    i++;
-                }
-
+                for (int i = 0; i < ranked.Count; i++)
+                    if (ranked[i].State.Config == c.Name) return i;
                 return int.MaxValue;
             })
             .ToList();
@@ -263,7 +371,9 @@ internal sealed class SearchEngine
                 _budget.Spend(_opt.BeamWidth);
                 BeamRuns++;
                 runs++;
+                long t0 = Stopwatch.GetTimestamp();
                 var result = Construction.Beam(start, order, pol, _opt.BeamWidth, Math.Max(1, _opt.BeamBranching), _rng, _budget);
+                ConstructTicks += Stopwatch.GetTimestamp() - t0;
                 if (result is not null)
                 {
                     result.Origin = start.Origin;
@@ -278,8 +388,14 @@ internal sealed class SearchEngine
     // ---- phase 3: destroy-and-repair improvement ----------------------------------------------------------------
     private bool RunImprovement()
     {
-        if (Pool.Count == 0) return false;
-        var current = Pool.Best!;
+        if (Pool.Best is not { } first) return false;
+        // The walk's current position. It need not be a kept plan: a layout that ties the best on every figure is a
+        // fine place to continue from, and only what enters the pool has to be validated.
+        (PackingState State, PlanMetrics Metrics) current = (first.State, first.Metrics);
+        // A second walk guided by roll length. Fabric is bought in whole metres, so price only drops when a layout
+        // crosses a metre boundary and the ranking gives no credit for getting closer to it. This walk keeps the
+        // shortest layout at the best price found so far and tries to shorten it further.
+        var shortest = current;
         int stagnation = 0;
         var ops = Enum.GetValues<DestroyOp>();
         while (!_budget.Expired)
@@ -289,17 +405,19 @@ internal sealed class SearchEngine
             _budget.Spend();
 
             double u = _rng.NextDouble();
-            PoolEntry baseEntry;
-            if (u < 0.55) baseEntry = current;
-            else if (u < 0.75) baseEntry = Pool.Best!;
-            else if (u < 0.9 && Pool.GroupBests.Count > 0) baseEntry = Pool.GroupBests.Values.OrderBy(e => e.Serial).ElementAt(_rng.Next(Pool.GroupBests.Count));
+            PackingState baseState;
+            if (u < 0.40) baseState = current.State;
+            else if (u < 0.60) baseState = shortest.State;
+            else if (u < 0.75) baseState = Pool.Best!.State;
+            else if (u < 0.9 && Pool.GroupBests.Count > 0) baseState = Pool.GroupBests.Values.OrderBy(e => e.Serial).ElementAt(_rng.Next(Pool.GroupBests.Count)).State;
             else
             {
                 var top = Pool.Sorted();
-                baseEntry = top[_rng.Next(Math.Min(8, top.Count))];
+                baseState = top[_rng.Next(Math.Min(8, top.Count))].State;
             }
 
-            var st = baseEntry.State.Clone();
+            long t0 = Stopwatch.GetTimestamp();
+            var st = baseState.Clone();
             foreach (var l in st.Layouts) l.Enabled = true;
             var op = ops[_rng.Next(ops.Length)];
             var removed = Destroy(st, op);
@@ -314,34 +432,54 @@ internal sealed class SearchEngine
             var order = PieceOrdering.Build(_p, removed, kind, st.Layouts.Select(l => l.Spec).ToList(), _rng, 0.15 * _rng.NextDouble());
             var pol = RandomPolicy(st.Layouts.Any(l => l.IsRoll && l.Enabled));
             st.Origin = $"improve:{op}:{pol}";
-            if (!Construction.PlaceAll(st, order, pol, _rng))
+            bool repaired = Construction.PlaceAll(st, order, pol, _rng);
+            ConstructTicks += Stopwatch.GetTimestamp() - t0;
+            if (!repaired)
             {
                 stagnation++;
                 continue;
             }
 
-            // Cheap pre-filter: a repair that buys more roll than its base cannot improve tier 1; skip the
-            // expensive finalise/assemble/validate path for it.
-            if (QuickPurchasedArea(st) > QuickPurchasedArea(baseEntry.State))
+            // Cheap pre-filter: a repair that buys more roll than its base cannot improve on it; skip the
+            // finalise/digest path for it.
+            if (QuickPurchasedArea(st) > QuickPurchasedArea(baseState))
             {
                 stagnation++;
                 continue;
             }
 
-            var (entry, newBest) = Submit(st);
-            if (newBest)
+            var sub = Submit(st);
+            if (sub.Metrics is not { } m)
+            {
+                stagnation++;
+                continue;
+            }
+
+            int guide = GuideCompare(m, shortest.Metrics);
+            if (guide <= 0) shortest = (st, m);
+            if (sub.NewBest)
             {
                 stagnation = 0;
-                current = Pool.Best!;
+                current = (Pool.Best!.State, Pool.Best.Metrics);
             }
             else
             {
-                stagnation++;
-                if (entry is not null && Pool.Comparer.Compare(entry.Plan, current.Plan) <= 0) current = entry;
+                // A strictly shorter layout at the best price is progress towards the next cheaper metre.
+                stagnation = guide < 0 ? 0 : stagnation + 1;
+                if (PlanRanking.Compare(m, current.Metrics, _opt.Objective) <= 0) current = (st, m);
             }
         }
 
         return false;
+    }
+
+    /// <summary>Search guidance only (never ranking): price, then roll length used, then the ranking itself.</summary>
+    private int GuideCompare(PlanMetrics a, PlanMetrics b)
+    {
+        int c = a.PurchaseCost.CompareTo(b.PurchaseCost);
+        if (c != 0) return c;
+        c = (a.ConsumedLengthMm ?? 0).CompareTo(b.ConsumedLengthMm ?? 0);
+        return c != 0 ? c : PlanRanking.Compare(a, b, _opt.Objective);
     }
 
     private static long QuickPurchasedArea(PackingState st)
@@ -369,6 +507,20 @@ internal sealed class SearchEngine
 
         int roll = st.RollLayout;
         var used = Enumerable.Range(0, st.Layouts.Length).Where(li => st.Layouts[li].PieceCount > 0).ToList();
+        // Rebuilding a whole source that holds most of a large job is a restart, not a repair: keep the destroyed
+        // part to about a third of the job and use a spatial window instead.
+        int limit = Math.Max(24, n / 3);
+        int rebuild = -1;
+        if (op == DestroyOp.RebuildSource && used.Count > 0)
+        {
+            rebuild = used[_rng.Next(used.Count)];
+            if (st.Layouts[rebuild].PieceCount > limit) op = DestroyOp.Window;
+        }
+        else if (op == DestroyOp.EmptyRoll && roll >= 0 && st.Layouts[roll].PieceCount > limit)
+        {
+            op = DestroyOp.Window;
+        }
+
         switch (op)
         {
             case DestroyOp.RollTail when roll >= 0 && st.Layouts[roll].PieceCount > 0:
@@ -378,8 +530,8 @@ internal sealed class SearchEngine
                 Take(st.InstancesIn(roll).Where(i => st.NodeOf[i]!.R.Bottom > c - delta));
                 break;
             }
-            case DestroyOp.RebuildSource when used.Count > 0:
-                Take(st.InstancesIn(used[_rng.Next(used.Count)]));
+            case DestroyOp.RebuildSource when rebuild >= 0:
+                Take(st.InstancesIn(rebuild));
                 break;
             case DestroyOp.Window:
             {

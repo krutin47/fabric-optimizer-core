@@ -64,6 +64,9 @@ internal sealed class SourceSpec
     public bool IsRoll => Kind == SourceKind.NewRoll;
     public long Area => W * L;
 
+    /// <summary>Plan group this source puts a plan in: "roll:{offerId}" for a roll offer.</summary>
+    public string Group { get; init; } = "warehouse-only";
+
     /// <summary>Longest roll this offer can supply, if limited.</summary>
     public long? MaxLengthUnits => FixedLengthUnits ?? (MaxOrderMetres is int m ? m * MetreUnits : null);
 }
@@ -73,6 +76,10 @@ internal sealed record RemnantPolicyUnits(long MinShort, long MinLong, decimal? 
 internal sealed class NormalizedProblem
 {
     public required OptimizationSnapshot Snapshot { get; init; }
+
+    /// <summary>Hash of the canonical snapshot; stamped on every candidate (handbook §97).</summary>
+    public required string SnapshotHash { get; init; }
+
     public required long Scale { get; init; }
     public required bool Directional { get; init; }
     public required PieceType[] Types { get; init; }
@@ -86,6 +93,15 @@ internal sealed class NormalizedProblem
     public RemnantPolicyUnits? Policy { get; init; }
     public required long RequiredArea { get; init; }
     public required long TotalRemnantArea { get; init; }
+
+    /// <summary>Shortest side of any piece footprint: a free region narrower than this can never take a piece.</summary>
+    public long MinPieceSide { get; init; }
+
+    /// <summary>Smallest piece footprint area: a free region smaller than this can never take a piece.</summary>
+    public long MinPieceArea { get; init; }
+
+    /// <summary>Instance indices, largest footprint first (ties by index). Fixed for the job, so it is sorted once.</summary>
+    public required int[] InstancesByAreaDesc { get; init; }
 
     public PieceType TypeOf(int instance) => Types[Instances[instance].Type];
 

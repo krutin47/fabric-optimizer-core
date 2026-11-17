@@ -14,7 +14,32 @@ internal sealed class SourceLayout
 
     public int PieceCount { get; set; }
     public long Consumed { get; set; }
+
+    /// <summary>
+    /// Free leaves that can still take a piece. Leaves too small for every piece of the job are left out, so
+    /// placement scans stay short; their area is counted in <see cref="DeadArea"/>.
+    /// </summary>
     public List<Node> Free { get; } = [];
+
+    /// <summary>Area of free leaves that are too small for any piece of this job.</summary>
+    public long DeadArea { get; set; }
+
+    public required long MinPieceSide { get; init; }
+    public required long MinPieceArea { get; init; }
+
+    /// <summary>True when no piece of the job can ever fit this free region.</summary>
+    public bool IsDead(Rect r) => Math.Min(r.W, r.H) < MinPieceSide || r.W * r.H < MinPieceArea;
+
+    /// <summary>Drops leaves added to <see cref="Free"/> from index <paramref name="from"/> on that no piece can use.</summary>
+    public void DropDeadFrom(int from)
+    {
+        for (int i = Free.Count - 1; i >= from; i--)
+        {
+            if (!IsDead(Free[i].R)) continue;
+            DeadArea += Free[i].R.Area;
+            Free.RemoveAt(i);
+        }
+    }
     public bool Enabled { get; set; } = true;
     public bool Dirty { get; set; }
 
@@ -27,9 +52,16 @@ internal sealed class SourceLayout
     /// </summary>
     public bool IsFrontier(Node n) => IsRoll && n.R.X == 0 && n.R.W == Spec.W && n.R.Bottom == Bound;
 
-    public static SourceLayout Create(SourceSpec spec, long bound)
+    public static SourceLayout Create(SourceSpec spec, long bound, NormalizedProblem p)
     {
-        var l = new SourceLayout { Spec = spec, Bound = bound, Root = new Node(new Rect(0, 0, spec.W, bound), null) };
+        var l = new SourceLayout
+        {
+            Spec = spec,
+            Bound = bound,
+            Root = new Node(new Rect(0, 0, spec.W, bound), null),
+            MinPieceSide = p.MinPieceSide,
+            MinPieceArea = p.MinPieceArea,
+        };
         l.Free.Add(l.Root);
         return l;
     }
@@ -42,6 +74,8 @@ internal sealed class SourceLayout
             Bound = Bound,
             Root = Node.Clone(Root, pieceMap),
             Enabled = Enabled,
+            MinPieceSide = MinPieceSide,
+            MinPieceArea = MinPieceArea,
         };
         c.RebuildFree();
         return c;
@@ -52,6 +86,7 @@ internal sealed class SourceLayout
         Free.Clear();
         PieceCount = 0;
         Consumed = 0;
+        DeadArea = 0;
         foreach (var n in Node.PreOrder(Root))
         {
             if (!n.IsLeaf) continue;
@@ -59,6 +94,10 @@ internal sealed class SourceLayout
             {
                 PieceCount++;
                 Consumed = Math.Max(Consumed, n.R.Bottom);
+            }
+            else if (IsDead(n.R))
+            {
+                DeadArea += n.R.Area;
             }
             else
             {
@@ -99,7 +138,7 @@ internal sealed class PackingState
         for (int i = 0; i < layouts.Length; i++)
         {
             var spec = p.Sources[sourceIndices[i]];
-            layouts[i] = SourceLayout.Create(spec, spec.IsRoll ? p.RollTrialLength(spec) : spec.L);
+            layouts[i] = SourceLayout.Create(spec, spec.IsRoll ? p.RollTrialLength(spec) : spec.L, p);
         }
 
         int n = p.Instances.Length;
@@ -150,6 +189,7 @@ internal sealed class PackingState
         if (idx < 0) throw new InvalidOperationException("Leaf is not free in this layout.");
         l.Free[idx] = l.Free[^1];
         l.Free.RemoveAt(l.Free.Count - 1);
+        int firstNew = l.Free.Count;
 
         bool hf = horizontalFirst || l.IsFrontier(leaf);
         if (l.IsFrontier(leaf) && section > o.H && section <= leaf.R.H)
@@ -165,6 +205,7 @@ internal sealed class PackingState
         }
 
         var pn = Node.CarvePiece(leaf, o.W, o.H, hf, l.Free);
+        l.DropDeadFrom(firstNew);
         Attach(layout, pn, instance, o.Rotated);
         unchecked
         {

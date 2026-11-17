@@ -22,21 +22,39 @@ public sealed record OptimizationOptions
     public int BeamWidth { get; init; } = 6;
     public int BeamBranching { get; init; } = 3;
 
-    /// <summary>Stop the improvement phase after this many consecutive iterations without a new best plan.</summary>
-    public int StagnationLimit { get; init; } = 1500;
+    /// <summary>
+    /// Stop the improvement phase after this many consecutive iterations without progress (a new best plan, or a
+    /// shorter layout at the best price).
+    /// </summary>
+    public int StagnationLimit { get; init; } = 8000;
 
-    /// <summary>Maximum number of verified plans retained in the incumbent pool.</summary>
-    public int PoolCapacity { get; init; } = 120;
+    /// <summary>
+    /// Number of verified plans the search keeps (plus the best per roll offer and the trade-off extremes). A layout
+    /// is only built into a full plan and validated when it could earn one of these places, so a smaller pool means
+    /// more of the budget goes into finding layouts. 32 measured better than 120 on every job size (docs/testing).
+    /// </summary>
+    public int PoolCapacity { get; init; } = 32;
 
     public OptimizerLimits Limits { get; init; } = new();
+
+    /// <summary>
+    /// Every returned candidate is always built and independently validated. With this flag the same is done for
+    /// every layout the search keeps, the moment it is kept, so a generator defect surfaces during the search rather
+    /// than at the end. It costs search time on large jobs; the test suite turns it on.
+    /// </summary>
+    public bool ValidateEveryKeptPlan { get; init; }
 }
 
 public sealed record ExactSolverOptions
 {
     public bool Enabled { get; init; } = true;
 
-    /// <summary>Only attempt the exact solver when the job has at most this many piece instances.</summary>
-    public int MaxInstances { get; init; } = 12;
+    /// <summary>
+    /// Only attempt the exact solver when the job has at most this many piece instances. What really limits it is
+    /// the number of distinct piece multisets (<see cref="MaxMultisets"/>): 40 copies of two piece types are easy,
+    /// 16 different pieces are not.
+    /// </summary>
+    public int MaxInstances { get; init; } = 40;
 
     /// <summary>Upper bound on distinct piece multisets (product of (quantity+1) over piece types).</summary>
     public int MaxMultisets { get; init; } = 4096;
@@ -45,6 +63,12 @@ public sealed record ExactSolverOptions
 
     /// <summary>Memo-state cap; exceeding it aborts the exact run without any optimality claim.</summary>
     public int MaxStates { get; init; } = 400_000;
+
+    /// <summary>
+    /// Cap on splits examined. Unlike the time slice it does not depend on the machine, so a deterministic run stops
+    /// at the same point everywhere. Exceeding it aborts the exact run without any optimality claim.
+    /// </summary>
+    public long MaxWork { get; init; } = 40_000_000;
 
     /// <summary>Fraction of the time budget the exact solver may use.</summary>
     public double TimeShare { get; init; } = 0.3;

@@ -59,7 +59,7 @@ internal static class T
 
     /// <summary>Deterministic, work-bounded options so tests are fast and reproducible.</summary>
     public static OptimizationOptions Det(int work = 300, int stagnation = 300) =>
-        new() { Mode = ExecutionMode.Deterministic, WorkBudget = work, StagnationLimit = stagnation };
+        new() { Mode = ExecutionMode.Deterministic, WorkBudget = work, StagnationLimit = stagnation, ValidateEveryKeptPlan = true };
 
     public static OptimizationResult Run(OptimizationSnapshot job, OptimizationOptions? options = null, CancellationToken ct = default) =>
         new HybridCutOptimizer().Optimize(job, options ?? Det(), ct);

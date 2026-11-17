@@ -37,7 +37,7 @@ static int Usage()
         DreamGlass optimiser CLI
           optimize <job.json> [--out result.json] [--svg <dir>] [--time <ms>] [--deterministic] [--work <units>] [--objective cheapest|historical|proposed] [--scrap-tolerance <m2>]
           validate <job.json> <result.json>
-          bench [--sizes 10,50,200] [--seeds 3] [--time <ms>] [--deterministic] [--work <units>]
+          bench [--sizes 10,50,200] [--seeds 3] [--time <ms>] [--deterministic] [--work <units>] [--csv]
         """);
     return 2;
 }
@@ -59,6 +59,9 @@ static OptimizationOptions ParseOptions(string[] a)
         Mode = a.Contains("--deterministic") ? ExecutionMode.Deterministic : ExecutionMode.TimeBudgeted,
         WorkBudget = Opt(a, "--work") is string w ? int.Parse(w) : null,
         Objective = objective,
+        StagnationLimit = Opt(a, "--stagnation") is string sl ? int.Parse(sl) : OptimizationOptions.Default.StagnationLimit,
+        PoolCapacity = Opt(a, "--pool") is string pc ? int.Parse(pc) : OptimizationOptions.Default.PoolCapacity,
+        Exact = Opt(a, "--exact-max") is string em ? new ExactSolverOptions { MaxInstances = int.Parse(em) } : new ExactSolverOptions(),
     };
 }
 
@@ -129,7 +132,7 @@ static void PrintSummary(OptimizationResult r)
     if (r.Status == RunStatus.InvalidInput) return;
     Console.WriteLine($"  search: {d.ConstructionsAttempted} constructions, {d.BeamRuns} beam runs, {d.ImprovementIterations} improvement iterations, {d.PlansValidated} validated / {d.PlansRejectedByValidator} rejected, pool {d.PoolSize}");
     Console.WriteLine($"  phases: {string.Join(", ", d.Phases.Select(p => $"{p.Phase} {p.ElapsedMs} ms"))}");
-    if (d.Exact is { } ex) Console.WriteLine($"  exact: {(ex.Attempted ? (ex.Completed ? "completed" : "aborted") : "not attempted")} — {ex.Reason}");
+    if (d.Exact is { } ex) Console.WriteLine($"  exact: {(ex.Attempted ? (ex.Completed ? "completed" : "aborted") : "not attempted")} in {ex.ElapsedMs} ms, {ex.StatesExplored} states, {ex.WorkUnits} splits — {ex.Reason}");
     if (d.PurchasedAreaLowerBoundM2 is decimal lb) Console.WriteLine($"  purchased-area lower bound: {lb} m² ({d.PurchasedAreaLowerBoundMethod})");
     foreach (var c in r.Candidates)
     {
@@ -152,7 +155,8 @@ static int Bench(string[] a)
     int time = int.Parse(Opt(a, "--time") ?? "5000");
     var options = ParseOptions(a);
     var optimizer = new HybridCutOptimizer();
-    Console.WriteLine("instances | seed | status    | ms     | cand | purchased m² | LB m²    | stock m² | scrap m² | util    | cuts | valid/rej | improve | exact");
+    if (a.Contains("--csv")) return BenchCsv(sizes, seeds, time, options, optimizer);
+    Console.WriteLine("instances | seed | status    | ms     | cost      | purchased m² | LB m²    | used mm  | stock m² | scrap m² | keep m² | cuts | built  | dup/weak   | valid/rej | improve | build/assemble/validate ms | exact");
     foreach (int n in sizes)
         for (int seed = 1; seed <= seeds; seed++)
         {
@@ -163,8 +167,26 @@ static int Bench(string[] a)
             var best = r.Candidates.FirstOrDefault();
             var m = best?.Metrics;
             var d = r.Diagnostics;
-            string exact = d.Exact is { Attempted: true } e ? (e.Completed ? "proved" : "aborted") : "-";
-            Console.WriteLine($"{n,9} | {seed,4} | {r.Status,-9} | {sw.ElapsedMilliseconds,6} | {r.Candidates.Count,4} | {m?.PurchasedAreaM2,12:0.000} | {d.PurchasedAreaLowerBoundM2,8:0.000} | {m?.ExistingStockAreaConsumedM2,8:0.000} | {m?.UnusableScrapAreaM2,8:0.000} | {m?.MaterialUtilization,7:P1} | {m?.TotalCuts,4} | {d.PlansValidated,5}/{d.PlansRejectedByValidator,-3} | {d.ImprovementIterations,7} | {exact}");
+            string exact = d.Exact is { Attempted: true } e ? (e.Completed ? $"proved {e.ElapsedMs} ms" : $"aborted {e.ElapsedMs} ms") : "-";
+            Console.WriteLine($"{n,9} | {seed,4} | {r.Status,-9} | {sw.ElapsedMilliseconds,6} | {m?.PurchaseCost,9:0.00} | {m?.PurchasedAreaM2,12:0.000} | {d.PurchasedAreaLowerBoundM2,8:0.000} | {m?.ConsumedLengthMm,8:0} | {m?.ExistingStockAreaConsumedM2,8:0.000} | {m?.UnusableScrapAreaM2,8:0.000} | {m?.LargestReusableAreaM2,7:0.000} | {m?.TotalCuts,4} | {d.CompletePlansBuilt,6} | {d.DuplicateLayoutsSkipped,4}/{d.UncompetitiveLayoutsSkipped,-5} | {d.PlansValidated,5}/{d.PlansRejectedByValidator,-3} | {d.ImprovementIterations,7} | {d.ConstructionMs,5}/{d.AssemblyMs,5}/{d.ValidationMs,5} | {exact}");
+        }
+
+    return 0;
+}
+
+/// <summary>Machine-readable benchmark rows, for comparing two builds on the same jobs (see docs/testing).</summary>
+static int BenchCsv(int[] sizes, int seeds, int time, OptimizationOptions options, HybridCutOptimizer optimizer)
+{
+    Console.WriteLine("instances,seed,status,ms,cost,scrap_m2,largest_keep_m2,used_mm,cuts,purchased_m2,stock_m2");
+    foreach (int n in sizes)
+        for (int seed = 1; seed <= seeds; seed++)
+        {
+            var job = SyntheticJobs.Mixed(n, seed) with { Search = new SearchSettings { TimeBudgetMs = time, Seed = seed, MaxCandidates = 3 } };
+            var sw = Stopwatch.StartNew();
+            var r = optimizer.Optimize(job, options);
+            sw.Stop();
+            var m = r.Candidates.FirstOrDefault()?.Metrics;
+            Console.WriteLine(string.Join(',', n, seed, r.Status, sw.ElapsedMilliseconds, m?.PurchaseCost, m?.UnusableScrapAreaM2, m?.LargestReusableAreaM2, m?.ConsumedLengthMm ?? 0, m?.TotalCuts, m?.PurchasedAreaM2, m?.ExistingStockAreaConsumedM2));
         }
 
     return 0;

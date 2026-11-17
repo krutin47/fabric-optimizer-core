@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using DreamGlass.Optimizer.Contracts;
+using DreamGlass.Optimizer.Infrastructure;
 using DreamGlass.Optimizer.Normalization;
 using DreamGlass.Optimizer.Solver;
 
@@ -11,10 +12,22 @@ internal sealed class ExactOutcome
     public bool Completed { get; set; }
     public string Reason { get; set; } = "";
     public long States { get; set; }
+
+    /// <summary>Splits examined (the exact solver's deterministic unit of work).</summary>
+    public long Work { get; set; }
     public long ElapsedMs { get; set; }
     public long? MinPurchasedAreaUnits { get; set; }
+
+    /// <summary>Proven minimum purchase cost (can come from a different roll offer than the minimum area).</summary>
+    public decimal? MinPurchaseCost { get; set; }
+
     public bool ProvenInfeasible { get; set; }
+
+    /// <summary>A plan attaining the minimum purchased area.</summary>
     public PackingState? Plan { get; set; }
+
+    /// <summary>A plan attaining the minimum purchase cost, when it differs from <see cref="Plan"/>.</summary>
+    public PackingState? CostPlan { get; set; }
 }
 
 /// <summary>
@@ -24,8 +37,9 @@ internal sealed class ExactOutcome
 /// (horizontal: split S, add lengths; vertical: split S and width, take the max). Cut positions are restricted
 /// to normal patterns (sums of piece widths), which is complete for guillotine packings, and widths are floored
 /// to the multiset's normal set to share memo entries. On top, all assignments of pieces to remnants are
-/// enumerated and the remainder goes to the cheapest-area roll offer. A completed run therefore <b>proves</b> the
-/// minimum newly purchased area (tier 1 of the objective) — and only that.
+/// enumerated and the remainder goes to each roll offer in turn. A completed run therefore <b>proves</b> the minimum
+/// newly purchased area and the minimum purchase cost (they can differ when roll widths have different prices) —
+/// and only those: scrap, leftover size and cuts are not part of the proof.
 /// </summary>
 internal sealed class ExactGuillotineSolver
 {
@@ -59,7 +73,12 @@ internal sealed class ExactGuillotineSolver
     private readonly Dictionary<(int G, int S, long W), Entry> _memo = [];
     private readonly Dictionary<(int G, int S), long[]> _normal = [];
     private readonly long _maxW;
+
+    /// <summary>Per grain class and multiset: the least width any packing needs, and the least length it needs at any width.</summary>
+    private readonly long[][] _minWidth;
+    private readonly long[][] _minLength;
     private long _states;
+    private long _work;
 
     private ExactGuillotineSolver(NormalizedProblem p, ExactSolverOptions o, SearchBudget budget, long deadlineMs, int total)
     {
@@ -101,7 +120,34 @@ internal sealed class ExactGuillotineSolver
         }
 
         _maxW = p.Sources.Length == 0 ? 0 : p.Sources.Max(x => x.W);
+
+        _minWidth = [new long[total], new long[total]];
+        _minLength = [new long[total], new long[total]];
+        for (int g = 0; g < 2; g++)
+        {
+            var typeMinW = new long[_t];
+            var typeMinH = new long[_t];
+            for (int t = 0; t < _t; t++)
+            {
+                typeMinW[t] = _ori[g][t].Length == 0 ? Inf : _ori[g][t].Min(o => o.W);
+                typeMinH[t] = _ori[g][t].Length == 0 ? Inf : _ori[g][t].Min(o => o.H);
+            }
+
+            for (int idx = 1; idx < total; idx++)
+            {
+                // The multiset without one copy of its first present type is already computed.
+                int t = 0;
+                while (Count(idx, t) == 0) t++;
+                int rest = idx - _stride[t];
+                _minWidth[g][idx] = Math.Max(_minWidth[g][rest], typeMinW[t]);
+                _minLength[g][idx] = Math.Max(_minLength[g][rest], typeMinH[t]);
+            }
+        }
     }
+
+    /// <summary>Constant-time lower bound on the length <paramref name="s"/> needs in width <paramref name="w"/> (weaker than <see cref="LowerBound"/>).</summary>
+    private long QuickBound(int g, long w, int s) =>
+        w < _minWidth[g][s] ? Inf : Math.Max((_area[s] + w - 1) / w, _minLength[g][s]);
 
     public static ExactOutcome TrySolve(NormalizedProblem p, ExactSolverOptions o, SearchBudget budget, long deadlineMs)
     {
@@ -128,6 +174,7 @@ internal sealed class ExactGuillotineSolver
     private void Tick()
     {
         if (++_states > _o.MaxStates) throw new AbortException($"State cap of {_o.MaxStates} reached; no optimality claim.");
+        if (_work > _o.MaxWork) throw new AbortException($"Work cap of {_o.MaxWork} splits reached; no optimality claim.");
         if ((_states & 1023) == 0 && (_budget.Cancelled || _budget.ElapsedMs >= _deadlineMs))
             throw new AbortException(_budget.Cancelled ? "Cancelled." : "Exact time slice exhausted; no optimality claim.");
     }
@@ -198,15 +245,6 @@ internal sealed class ExactGuillotineSolver
         return i >= 0 ? sorted[i] : 0;
     }
 
-    /// <summary>Minimum width any packing of <paramref name="s"/> needs (its widest piece in its narrowest legal orientation).</summary>
-    private long MinWidthNeeded(int g, int s)
-    {
-        long m = 0;
-        for (int t = 0; t < _t; t++)
-            if (Count(s, t) > 0) m = Math.Max(m, _ori[g][t].Min(o => o.W));
-        return m;
-    }
-
     private long LowerBound(int g, long w, int s)
     {
         long lb = (_area[s] + w - 1) / w;
@@ -243,25 +281,34 @@ internal sealed class ExactGuillotineSolver
             }
             else
             {
+                // Each split is first tested against cheap lower bounds of its two parts, so parts that cannot
+                // beat the best split found so far are never solved (or memoised) at all.
                 foreach (int sub in Subs(s))
                 {
                     int comp = s - sub;
+                    _work++;
                     if (sub <= comp)
                     {
-                        long a = MinLen(g, wn, sub);
-                        if (a < e.Len)
+                        long lbB = QuickBound(g, wn, comp);
+                        if (lbB < Inf && QuickBound(g, wn, sub) + lbB < e.Len)
                         {
-                            long b = MinLen(g, wn, comp);
-                            if (a + b < e.Len) e = new Entry { Len = a + b, Kind = KHorizontal, Sub = sub };
+                            long a = MinLen(g, wn, sub);
+                            if (a + lbB < e.Len)
+                            {
+                                long b = MinLen(g, wn, comp);
+                                if (a + b < e.Len) e = new Entry { Len = a + b, Kind = KHorizontal, Sub = sub };
+                            }
                         }
                     }
 
                     if (e.Len <= lb) break;
-                    long maxLeft = wn - MinWidthNeeded(g, comp);
+                    long maxLeft = wn - _minWidth[g][comp];
                     var widths = Normal(g, sub);
                     for (int i = 1; i < widths.Length && widths[i] <= maxLeft; i++)
                     {
                         long pw = widths[i];
+                        _work++;
+                        if (QuickBound(g, pw, sub) >= e.Len || QuickBound(g, wn - pw, comp) >= e.Len) continue;
                         long a = MinLen(g, pw, sub);
                         if (a >= e.Len) continue;
                         long b = MinLen(g, wn - pw, comp);
@@ -309,20 +356,35 @@ internal sealed class ExactGuillotineSolver
                 reach[r + 1] = next;
             }
 
-            long best = Inf;
-            int bestIdx = -1, bestRoll = -1;
+            // Two winners: least purchased area (ties: cheaper) and least cost (ties: less area).
+            long best = Inf, costArea = Inf;
+            decimal bestAreaCost = decimal.MaxValue, bestCost = decimal.MaxValue;
+            int bestIdx = -1, bestRoll = -1, costIdx = -1, costRoll = -1;
+            void Offer(int idx, int roll, long area, decimal cost)
+            {
+                if (area < best || (area == best && cost < bestAreaCost))
+                {
+                    best = area;
+                    bestAreaCost = cost;
+                    bestIdx = idx;
+                    bestRoll = roll;
+                }
+
+                if (cost < bestCost || (cost == bestCost && area < costArea))
+                {
+                    bestCost = cost;
+                    costArea = area;
+                    costIdx = idx;
+                    costRoll = roll;
+                }
+            }
+
             foreach (int idx in reach[k].Keys.Order())
             {
                 int rest = full - idx;
                 if (rest == 0)
                 {
-                    if (0 < best)
-                    {
-                        best = 0;
-                        bestIdx = idx;
-                        bestRoll = -1;
-                    }
-
+                    Offer(idx, -1, 0, 0m);
                     continue;
                 }
 
@@ -332,12 +394,7 @@ internal sealed class ExactGuillotineSolver
                     long len = MinLen(G(spec.Axis), spec.W, rest);
                     if (len >= Inf || NormalizedProblem.OrderedLength(spec, len) is not long ordered) continue;
                     long area = spec.W * ordered;
-                    if (area < best)
-                    {
-                        best = area;
-                        bestIdx = idx;
-                        bestRoll = ri;
-                    }
+                    Offer(idx, ri, area, Units.AreaToM2(area, _p.Scale) * spec.Offer!.PricePerSquareMetre);
                 }
             }
 
@@ -350,8 +407,11 @@ internal sealed class ExactGuillotineSolver
             }
 
             outcome.MinPurchasedAreaUnits = best;
-            outcome.Reason = "Completed: minimum purchased area proven over all guillotine plans and source assignments.";
+            outcome.MinPurchaseCost = bestCost;
+            outcome.Reason = "Completed: minimum purchased area and minimum purchase cost proven over all guillotine plans, source assignments and roll offers.";
             outcome.Plan = BuildPlan(reach, rem, bestIdx, bestRoll, full);
+            if (costIdx != bestIdx || costRoll != bestRoll)
+                outcome.CostPlan = BuildPlan(reach, rem, costIdx, costRoll, full);
         }
         catch (AbortException ex)
         {
@@ -361,6 +421,7 @@ internal sealed class ExactGuillotineSolver
         finally
         {
             outcome.States = _states;
+            outcome.Work = _work;
             outcome.ElapsedMs = sw.ElapsedMilliseconds;
         }
 
