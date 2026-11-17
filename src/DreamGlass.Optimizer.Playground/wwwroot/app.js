@@ -228,6 +228,7 @@ const COLS = {
     { k: 'widthMm', label: 'Height mm', t: 'num', tip: 'Height of the piece: the roll\'s fixed dimension it was cut from, in mm. Called widthMm in the JSON.' },
     { k: 'patternAxis', label: 'Pattern runs', t: 'sel', opts: AXES, optLabels: AXIS_LABEL, tip: 'Which way the pattern runs on this piece. Across the roll: top to bottom (usual). Along the length: left to right along its length.' },
     { k: 'binReference', label: 'Bin', t: 'optstr', tip: 'Where it is stored. Printed on the cutting sheet so it can be found.' },
+    { k: 'excludeReason', label: 'Leave out because', t: 'optstr', tip: 'Leave empty to offer this piece to the optimiser. Type a reason (damaged, held for another job, wrong shade…) to leave it out: it is not used, and the reason is recorded with the job.' },
   ],
 };
 const SECTIONS = {
@@ -448,7 +449,11 @@ const SIGNED_OUT = 'Your sign-in has expired. Reload the page to sign in again.'
 // service's own 403 page), so the cause is visible on screen.
 async function errorText(res) {
   const text = await res.text().catch(() => '');
-  try { const data = JSON.parse(text); if (data && data.error) return data.error; } catch { /* not JSON */ }
+  try {
+    const data = JSON.parse(text);
+    const msg = data?.detail || data?.error;
+    if (msg) return data.correlationId ? `${msg} (reference ${data.correlationId})` : msg;
+  } catch { /* not JSON */ }
   const plain = text.replace(/<(style|script)[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   return `Server returned ${res.status}${plain ? `: ${plain.slice(0, 200)}` : ''}`;
 }
@@ -457,7 +462,7 @@ function scheduleCheck() { clearTimeout(checkTimer); checkTimer = setTimeout(run
 async function runCheck() {
   const seq = ++checkSeq;
   try {
-    const res = await fetch('api/check', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(state) });
+    const res = await fetch('api/check', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(snapshotOf(state)) });
     const data = res.ok ? await res.json() : null;
     const message = res.ok ? '' : res.status === 401 ? SIGNED_OUT : await errorText(res);
     if (seq !== checkSeq) return;
@@ -477,9 +482,35 @@ const ISSUE_TITLE = {
   STOCK_UNAVAILABLE: 'Stock not available',
 };
 const issueTitle = (e) => ISSUE_TITLE[e.code] || 'Needs fixing';
+
+// Warehouse rows with a "leave out" reason are sent as excludedStock (with that reason), the rest as stock. The maps
+// turn the server's $.stock[i] / $.excludedStock[i] paths back into form rows.
+let stockRowOf = [];
+let excludedRowOf = [];
+function snapshotOf(s) {
+  const offered = [];
+  const excluded = [...(s.excludedStock || [])];
+  stockRowOf = [];
+  excludedRowOf = excluded.map(() => -1);
+  (s.stock || []).forEach((r, i) => {
+    const { excludeReason, ...item } = r;
+    if (excludeReason && String(excludeReason).trim()) {
+      excluded.push({ stockId: r.stockId, version: r.version, reason: String(excludeReason).trim() });
+      excludedRowOf.push(i);
+    } else {
+      offered.push(item);
+      stockRowOf.push(i);
+    }
+  });
+  return { ...s, stock: offered, excludedStock: excluded };
+}
+
 const rowOf = (path) => {
-  const m = /^\$\.(pieces|rollOffers|stock)\[(\d+)\](?:\.(\w+))?/.exec(path || '');
-  return m ? { list: m[1], i: +m[2], k: m[3] } : null;
+  const m = /^\$\.(pieces|rollOffers|stock|excludedStock)\[(\d+)\](?:\.(\w+))?/.exec(path || '');
+  if (!m) return null;
+  if (m[1] === 'stock') return { list: 'stock', i: stockRowOf[+m[2]] ?? +m[2], k: m[3] };
+  if (m[1] === 'excludedStock') return excludedRowOf[+m[2]] >= 0 ? { list: 'stock', i: excludedRowOf[+m[2]], k: 'excludeReason' } : null;
+  return { list: m[1], i: +m[2], k: m[3] };
 };
 const ROW_NAME = { pieces: 'piece', rollOffers: 'supplier roll', stock: 'warehouse item' };
 const rowLabel = (r) => {
@@ -579,8 +610,10 @@ async function run() {
   const cap = Math.min(state.search?.timeBudgetMs ?? 0, 30000) / 1000;
   $('#run').disabled = true;
   $('#cancel').hidden = false;
-  $('#results').innerHTML = `<div class="loading"><div class="spinner"></div><div><b>Optimising…</b>
-    <div class="muted small" id="elapsed">0.0 s of up to ${cap.toFixed(1)} s</div></div></div>`;
+  $('#results').innerHTML = `<div class="loading"><div class="spinner"></div><div><b>Searching for valid layouts…</b>
+    <div class="muted small" id="elapsed">0.0 s of up to ${cap.toFixed(1)} s</div>
+    <div class="muted small">Every plan is checked by an independent checker before it is shown. Cancel stops the search; nothing partial is kept.</div></div></div>`;
+  announce('Optimising. This can take up to ' + cap.toFixed(0) + ' seconds.');
   const tick = setInterval(() => {
     const el = $('#elapsed');
     if (el) el.textContent = `${((performance.now() - started) / 1000).toFixed(1)} s of up to ${cap.toFixed(1)} s`;
@@ -589,7 +622,7 @@ async function run() {
     const res = await fetch('api/optimize', {
       method: 'POST',
       headers: JSON_HEADERS,
-      body: JSON.stringify({ snapshot: state, deterministic: runOpts.deterministic, workBudget: runOpts.workBudget, objective: runOpts.objective, scrapToleranceM2: runOpts.scrapToleranceM2 }),
+      body: JSON.stringify({ snapshot: snapshotOf(state), deterministic: runOpts.deterministic, workBudget: runOpts.workBudget, objective: runOpts.objective, scrapToleranceM2: runOpts.scrapToleranceM2 }),
       signal: controller.signal,
     }).catch((e) => {
       if (e.name === 'AbortError') throw e;
@@ -600,16 +633,33 @@ async function run() {
     response = await res.json();
     selected = 0;
     renderResults();
+    announce(resultSummary(response.result));
   } catch (err) {
     $('#results').innerHTML = err.name === 'AbortError'
       ? '<div class="callout warn"><b>Cancelled.</b> The search stopped and nothing partial was kept.</div>'
       : `<div class="callout bad"><b>Request failed.</b> ${esc(err.message)}</div>`;
+    announce(err.name === 'AbortError' ? 'Cancelled. Nothing partial was kept.' : `Request failed. ${err.message}`);
   } finally {
     clearInterval(tick);
     $('#run').disabled = false;
     $('#cancel').hidden = true;
     controller = null;
   }
+}
+
+// Status messages for screen readers (WCAG 4.1.3): announced without moving focus.
+function announce(text) {
+  const el = $('#run-status');
+  if (!el) return;
+  el.textContent = '';
+  setTimeout(() => { el.textContent = text; }, 50);
+}
+
+function resultSummary(r) {
+  const c = r.candidates?.[0];
+  if (!c) return `${STATUS_TEXT[r.status] || r.status}.`;
+  const order = c.purchase ? `order ${num(c.purchase.orderedLengthMetres, 3)} ${Number(c.purchase.orderedLengthMetres) === 1 ? 'metre' : 'metres'} of ${c.purchase.rollOfferId}, ${money(c.purchase.purchaseCost, c.purchase.currency)}` : 'no new fabric to order';
+  return `${plural(r.candidates.length, 'plan')} found. Best plan: ${order}, ${c.metrics.totalCuts} cuts.`;
 }
 
 // ---------- results ---------------------------------------------------------------------------------------------
@@ -648,15 +698,17 @@ function tagChip(t) {
 const offerOf = (id) => response?.effectiveSnapshot?.rollOffers?.find((o) => o.offerId === id);
 const stockUsed = (c) => c.sources.filter((s) => s.kind === 'WarehouseRemnant');
 
+// Honest quality labels (handbook §32, §45): never "optimal"; "proven" only with an exhaustive-search proof.
 function qualityBadge(c) {
-  const b = c.bound;
-  if (c.qualityStatus === 'BoundedGap' && b && Number(b.gapM2) === 0) {
-    return `<span class="pill good" tabindex="0" data-tip="The optimiser proved no plan can order less fabric than this one.">Order proven minimal</span>`;
+  const cost = c.costBound, area = c.bound;
+  if (cost && Number(cost.gapM2) === 0) {
+    return `<span class="pill good" tabindex="0" data-tip="${esc(cost.note)} Scrap, leftovers and cuts are the best found, not proven.">${cost.proven ? 'Price proven lowest' : 'Price at the lower bound'}</span>`;
   }
-  if (c.qualityStatus === 'BoundedGap' && b) {
-    return `<span class="pill neutral" tabindex="0" data-tip="${esc(b.note)}">Orders at most ${m2(b.gapM2)} more than the minimum</span>`;
+  if (area && area.proven && Number(area.gapM2) === 0) {
+    return `<span class="pill good" tabindex="0" data-tip="${esc(area.note)}">Fabric ordered proven least</span>`;
   }
-  return '<span class="pill neutral" tabindex="0" data-tip="The best plan found in the time allowed. Every plan shown has passed the independent checker.">Best found</span>';
+  const gap = cost && cost.gapPercentOfBound != null ? ` The price is at most ${num(cost.gapPercentOfBound, 1)} % above a lower bound (${esc(cost.method)}).` : '';
+  return `<span class="pill neutral" tabindex="0" data-tip="Best verified plan found within the search budget. It passed the independent check; it is not proven to be the best possible.${gap}">Best verified plan found</span>`;
 }
 
 function orderCell(c) {
@@ -668,8 +720,8 @@ function orderCell(c) {
 function orderHtml(c) {
   const p = c.purchase;
   if (!p) {
-    return `<div class="box order none"><div class="box-k">Order from supplier</div><div class="box-v">Nothing</div>
-      <div class="box-sub">Everything is cut from warehouse stock.</div></div>`;
+    return `<div class="box order none"><div class="box-k">Order from supplier</div><div class="box-v">No new fabric to order</div>
+      <div class="box-sub">The selected warehouse pieces cover this job.</div></div>`;
   }
   const padding = Number(p.paddingLengthMm);
   const needed = padding > 0
@@ -765,6 +817,7 @@ function renderResults() {
     tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
   });
   $('#results').querySelectorAll('[data-open-print]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); openPrint(b.dataset.openPrint); }));
+  $('#results').querySelector('[data-open-doc]')?.addEventListener('click', openDocument);
   $('#results').querySelectorAll('.print').forEach((f) => f.addEventListener('click', () => f.classList.toggle('zoomed')));
 }
 
@@ -780,7 +833,9 @@ function technicalHtml(r, d) {
       ${row('Versions', `solver ${esc(r.solverVersion)} · checker ${esc(r.validatorVersion)}`)}
       ${r.status !== 'InvalidInput' ? `
       ${row('Search', `${num(d.constructionsAttempted, 0)} constructions · ${num(d.beamRuns, 0)} beam runs · ${num(d.improvementIterations, 0)} improvement steps`)}
-      ${row('Checked', `${num(d.plansValidated, 0)} plans passed the independent checker · ${num(d.plansRejectedByValidator, 0)} rejected`)}
+      ${row('Checked', `${num(d.plansValidated, 0)} plans passed the independent checker · ${num(d.plansRejectedByValidator, 0)} rejected · ${num((d.duplicateLayoutsSkipped || 0) + (d.uncompetitiveLayoutsSkipped || 0), 0)} layouts skipped as duplicates or not competitive`)}
+      ${(d.rejectedCandidates || []).length ? row('Rejected by the checker', d.rejectedCandidates.map((x) => esc(x.failures.map((f) => f.code).join(', '))).join('<br>')) : ''}
+      ${d.purchaseCostLowerBound != null ? row('Price lower bound', `${money(d.purchaseCostLowerBound, r.candidates?.[0]?.metrics.currency)} (${esc(d.purchaseCostLowerBoundMethod)})`) : ''}
       ${row('Exact solver', `<span title="${esc(ex?.reason)}">${esc(exactText)}</span>`)}
       ${d.purchasedAreaLowerBoundM2 != null ? row('Order lower bound', `${m2(d.purchasedAreaLowerBoundM2)} (${esc(d.purchasedAreaLowerBoundMethod)})`) : ''}` : ''}
     </tbody></table>
@@ -798,7 +853,7 @@ function candidateHtml(c) {
   return `<div class="card">
     <div class="card-head">
       <h2>Plan #${c.rank}</h2>
-      <div class="badges">${qualityBadge(c)}
+      <div class="badges"><button type="button" class="btn small" data-open-doc>Printable cut plan</button>${qualityBadge(c)}
         <span class="pill ${c.validation?.passed ? 'good' : 'bad'}" tabindex="0" data-tip="An independent checker re-measured every piece, cut and leftover of this plan.">${c.validation?.passed ? '✓ Checked' : '✗ Failed check'}</span></div>
     </div>
     <div class="summary">${orderHtml(c)}${stockHtml(c)}</div>
@@ -809,7 +864,7 @@ function candidateHtml(c) {
         <th>${tipped('Padding', 'Top / Right / Bottom / Left, in mm.')}</th><th>${tipped('Turned', 'The panel lies on its side on the cutting sheet: its height runs left to right.')}</th><th>Grain</th></tr></thead>
       <tbody>${c.placements.map((p) => {
         const [cw, cl] = cut(p);
-        return `<tr><td>${esc(p.pieceInstanceId)}</td><td>${esc(p.sourceId.replace(/^new-roll:/, 'order: '))}</td>
+        return `<tr data-piece="${esc(p.pieceInstanceId)}" tabindex="0"><td>${esc(p.pieceInstanceId)}</td><td>${esc(p.sourceId.replace(/^new-roll:/, 'order: '))}</td>
         <td><b>${num(cw, 1)} × ${num(cl, 1)}</b></td>
         <td>${num(p.nominalWidthMm, 1)} × ${num(p.nominalLengthMm, 1)}</td>
         <td>${padded(p) ? [p.paddingMm.top, p.paddingMm.right, p.paddingMm.bottom, p.paddingMm.left].map((v) => num(v, 1)).join(' / ') : '<span class="muted">none</span>'}</td>
@@ -833,7 +888,10 @@ function candidateHtml(c) {
       <div class="metrics">
         ${metric('Fabric needed (with padding)', m2(m.requiredCutAreaM2), 'Total area of all cut-outs, including padding.')}
         ${metric('Newly ordered', m2(m.purchasedAreaM2), 'Area ordered from the supplier (full width × ordered metres).')}
+        ${metric('…of which the layout uses', m2(m.newConsumedAreaM2), 'Full width × the running length the layout needs.')}
+        ${metric('…left over from rounding up', m2(m.roundingSurplusAreaM2), 'Full width × the part of the last metre the layout does not need.')}
         ${metric('Warehouse stock used', m2(m.existingStockAreaConsumedM2), 'Area of the warehouse pieces this plan cuts into.')}
+        ${metric('Warehouse stock untouched', m2(m.existingStockUntouchedAreaM2), 'Warehouse pieces offered but not cut. They stay in the warehouse; this is not waste.')}
         ${metric('Scrap', m2(m.unusableScrapAreaM2), 'Leftover area too small to keep.')}
         ${metric('Reusable leftovers', `${m2(m.reusableResidualAreaM2)} <span class="muted small">(${m.reusableOffcutCount})</span>`, 'Leftover area big enough to keep, and how many pieces.')}
         ${metric('Largest reusable leftover', m2(m.largestReusableAreaM2), 'Area of the biggest leftover that is kept.')}
@@ -842,7 +900,8 @@ function candidateHtml(c) {
         ${metric('Thin strips', m.thinFragmentCount, 'Narrow leftover strips that are awkward to handle.')}
         ${metric('Order cost', money(m.purchaseCost, m.currency), 'Price of the fabric ordered.')}
       </div>
-      ${c.bound ? `<p class="muted small">${esc(c.bound.note)}</p>` : ''}
+      ${c.costBound ? `<p class="muted small">Price: ${esc(c.costBound.note)}</p>` : ''}
+      ${c.bound ? `<p class="muted small">Fabric ordered: ${esc(c.bound.note)}</p>` : ''}
       <p class="muted small">Plan id ${esc(c.candidateId)}</p>
     </details>
   </div>`;
@@ -869,7 +928,7 @@ function cutRow(c, s) {
   const [tx, ty] = sheetPoint(c, s.sourceId, s.toXMm, s.toYMm);
   const vertical = fx === tx;
   const what = vertical ? `Top to bottom at ${num(fx, 1)} from the left` : `Left to right at ${num(fy, 1)} from the top`;
-  return `<tr><td>${s.sequence}</td><td>${esc(sheetName(s.sourceId))}</td><td>${what}</td>
+  return `<tr data-cut="${s.sequence}" tabindex="0"><td>${s.sequence}</td><td>${esc(sheetName(s.sourceId))}</td><td>${what}</td>
     <td>${num(vertical ? Math.abs(ty - fy) : Math.abs(tx - fx), 1)}</td></tr>`;
 }
 
@@ -915,6 +974,32 @@ function openPrint(key) {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
+// The printable cut plan: the server builds it from the checked plan (tables per sheet plus the drawings).
+function openDocument() {
+  const c = response.result.candidates[selected];
+  const html = response.documents?.[c.candidateId];
+  if (!html) return;
+  const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+  window.open(url, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+// Pointing at or focusing a piece or a cut in the tables highlights it on the drawings (and the other way round).
+function wireHighlights() {
+  const root = $('#results');
+  const mark = (attr, value, on) => root.querySelectorAll(`[${attr}="${CSS.escape(value)}"]`).forEach((el) => el.classList.toggle('hl', on));
+  const handler = (on) => (e) => {
+    const t = e.target.closest?.('[data-piece],[data-cut]');
+    if (!t || !root.contains(t)) return;
+    if (t.dataset.piece) mark('data-piece', t.dataset.piece, on);
+    if (t.dataset.cut) mark('data-cut', t.dataset.cut, on);
+  };
+  root.addEventListener('mouseover', handler(true));
+  root.addEventListener('mouseout', handler(false));
+  root.addEventListener('focusin', handler(true));
+  root.addEventListener('focusout', handler(false));
+}
+
 function downloadJson() {
   const blob = new Blob([JSON.stringify(response.result, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
@@ -925,6 +1010,7 @@ function downloadJson() {
 }
 
 // ---------- boot -------------------------------------------------------------------------------------------------
+wireHighlights();
 loadPreset(0);
 fetch('api/info').then((r) => r.json()).then((info) => {
   $('#versions').textContent = `${info.buildVersion ? `DreamGlass ${info.buildVersion} · ` : ''}solver ${info.solverVersion} · checker ${info.validatorVersion}`;

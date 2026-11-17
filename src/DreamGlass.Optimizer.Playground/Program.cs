@@ -113,7 +113,7 @@ app.MapPost("/api/optimize", async (HttpContext ctx) =>
     if (readError is not null)
         return readError;
     if (req?.Snapshot is null)
-        return Api.Error("Request must contain a 'snapshot'.", StatusCodes.Status400BadRequest);
+        return Api.Error(ctx, "SNAPSHOT_MISSING", "Request must contain a 'snapshot'.", StatusCodes.Status400BadRequest);
 
     // Keep the playground responsive: cap the budget but leave invalid values for the validator to report.
     var snapshot = req.Snapshot;
@@ -135,7 +135,10 @@ app.MapPost("/api/optimize", async (HttpContext ctx) =>
     var overviews = result.Candidates.ToDictionary(
         c => c.CandidateId,
         c => CutPlanSvgRenderer.RenderSupplierRollOverview(c, snapshot.RollOffers?.FirstOrDefault(o => o.OfferId == c.Purchase?.RollOfferId), result.SolverVersion));
-    return Results.Text(OptimizerJson.Serialize(new { result, printouts, overviews, effectiveSnapshot = snapshot }, indented: false), "application/json");
+    // The printable cut plan per candidate: drawings plus the same information as tables (handbook §36, §47).
+    var printedAt = DateTimeOffset.UtcNow;
+    var documents = result.Candidates.ToDictionary(c => c.CandidateId, c => CutPlanDocument.Render(c, snapshot, result, printedAt));
+    return Results.Text(OptimizerJson.Serialize(new { result, printouts, overviews, documents, effectiveSnapshot = snapshot }, indented: false), "application/json");
 });
 
 try
@@ -277,9 +280,13 @@ internal sealed class PasswordGate
     }
 }
 
+/// <summary>
+/// Request reading and error answers. Errors are RFC 9457 Problem Details (handbook §12): a stable machine-readable
+/// <c>code</c>, a safe human <c>detail</c> and a <c>correlationId</c> to quote to support. No stack traces or internals.
+/// </summary>
 internal static class Api
 {
-    /// <summary>Reads the request body as JSON; a bad or oversized body becomes a JSON error the page shows.</summary>
+    /// <summary>Reads the request body as JSON; a bad or oversized body becomes a Problem Details answer the page shows.</summary>
     public static async Task<(T? Value, IResult? Error)> ReadJsonAsync<T>(HttpContext ctx)
     {
         try
@@ -288,16 +295,27 @@ internal static class Api
         }
         catch (JsonException ex)
         {
-            return (default, Error($"Could not read the job JSON: {ex.Message}", StatusCodes.Status400BadRequest));
+            return (default, Error(ctx, "JSON_INVALID", $"Could not read the job JSON: {ex.Message}", StatusCodes.Status400BadRequest));
         }
         catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge)
         {
-            return (default, Error($"The job is too large: the playground accepts up to {Hosting.MaxRequestBytes / 1_000_000} MB per request.", ex.StatusCode));
+            return (default, Error(ctx, "REQUEST_TOO_LARGE", $"The job is too large: the playground accepts up to {Hosting.MaxRequestBytes / 1_000_000} MB per request.", ex.StatusCode));
         }
     }
 
-    public static IResult Error(string message, int statusCode) =>
-        Results.Text(OptimizerJson.Serialize(new { error = message }, false), "application/json", statusCode: statusCode);
+    public static IResult Error(HttpContext ctx, string code, string detail, int status) =>
+        Results.Text(
+            OptimizerJson.Serialize(new
+            {
+                type = $"https://dreamglass.invalid/problems/{code.ToLowerInvariant().Replace('_', '-')}",
+                title = status switch { 400 => "Bad request", 413 => "Request too large", _ => "Request failed" },
+                status,
+                detail,
+                code,
+                correlationId = ctx.TraceIdentifier,
+            }, false),
+            "application/problem+json",
+            statusCode: status);
 }
 
 internal static class LocalPorts

@@ -6,10 +6,60 @@ using DreamGlass.Optimizer.Contracts;
 namespace DreamGlass.Optimizer.Printing;
 
 /// <summary>
+/// What a printout says about where it comes from (handbook §36, §102): the job revision, the material, when it was
+/// printed and which solver produced the plan. Everything is optional; a printout never invents a value.
+/// </summary>
+public sealed record PrintContext
+{
+    public string? MaterialId { get; init; }
+    public string? MaterialName { get; init; }
+    public string? JobId { get; init; }
+    public string? JobRevisionId { get; init; }
+
+    /// <summary>When the document was produced. Left out of the printout when null (keeps test output stable).</summary>
+    public DateTimeOffset? PrintedAtUtc { get; init; }
+
+    /// <summary>The run's solver version; defaults to this library's <see cref="HybridCutOptimizer.SolverVersion"/>.</summary>
+    public string? SolverVersion { get; init; }
+
+    public static PrintContext From(OptimizationSnapshot snapshot, OptimizationResult? result = null, DateTimeOffset? printedAtUtc = null) => new()
+    {
+        MaterialId = snapshot.MaterialId,
+        JobId = snapshot.JobId,
+        JobRevisionId = snapshot.JobRevisionId,
+        PrintedAtUtc = printedAtUtc,
+        SolverVersion = result?.SolverVersion,
+    };
+
+    /// <summary>"Job J-1 revision 3 · material fabric-linen · printed 2026-11-17 10:00 UTC" (only the parts that are known).</summary>
+    public string Describe()
+    {
+        var parts = new List<string>();
+        string job = (string.IsNullOrWhiteSpace(JobId), string.IsNullOrWhiteSpace(JobRevisionId)) switch
+        {
+            (false, false) => $"Job {JobId} revision {JobRevisionId}",
+            (false, true) => $"Job {JobId}",
+            (true, false) => $"Job revision {JobRevisionId}",
+            _ => "",
+        };
+        if (job.Length > 0) parts.Add(job);
+        string material = string.IsNullOrWhiteSpace(MaterialName) ? MaterialId ?? "" : string.IsNullOrWhiteSpace(MaterialId) ? MaterialName : $"{MaterialName} ({MaterialId})";
+        if (material.Length > 0) parts.Add($"material {material}");
+        if (PrintedAtUtc is { } at) parts.Add($"printed {at.ToUniversalTime():yyyy-MM-dd HH:mm} UTC");
+        return string.Join(" · ", parts);
+    }
+}
+
+/// <summary>
 /// Workshop cut printouts (spec §8): one SVG per physical source, drawn in the source's display orientation,
 /// with numbered edge-to-edge cuts, piece labels (cut-out size incl. padding and finished size), edge dimensions
 /// as laid on the table, pattern stripes, residual eligibility and — for a new roll — the order quantity with
 /// needed/ordered length dimension lines. Refuses plans that have not passed independent validation.
+/// <para>
+/// A drawing alone is not a cut plan (handbook §36, §47): <see cref="CutPlanDocument"/> puts each drawing next to
+/// the same information as tables. Each SVG carries a text description, a scale bar with the statement that it is
+/// proportional rather than actual size, and the pattern direction in words, so it stays usable in black and white.
+/// </para>
 /// </summary>
 public static class CutPlanSvgRenderer
 {
@@ -20,16 +70,38 @@ public static class CutPlanSvgRenderer
     /// <param name="directionalMaterial">Whether the material has a pattern direction (grain labels are drawn).</param>
     /// <param name="solverVersion">The run's <c>solverVersion</c>, printed in the footer; defaults to this library's
     /// <see cref="HybridCutOptimizer.SolverVersion"/>.</param>
-    public static IReadOnlyList<(string SourceId, string Svg)> Render(CandidateCutPlan plan, bool directionalMaterial, string? solverVersion = null)
+    public static IReadOnlyList<(string SourceId, string Svg)> Render(CandidateCutPlan plan, bool directionalMaterial, string? solverVersion = null) =>
+        Render(plan, directionalMaterial, new PrintContext { SolverVersion = solverVersion });
+
+    /// <summary>One SVG per physical source, with the job, material and print date of <paramref name="context"/> in the footer.</summary>
+    public static IReadOnlyList<(string SourceId, string Svg)> Render(CandidateCutPlan plan, bool directionalMaterial, PrintContext context)
     {
         if (!plan.Validation.Passed)
             throw new InvalidOperationException("Only independently validated plans can be printed.");
-        return plan.Sources.Select(s => (s.SourceId, RenderSource(plan, s, directionalMaterial, solverVersion))).ToList();
+        return plan.Sources.Select(s => (s.SourceId, RenderSource(plan, s, directionalMaterial, context))).ToList();
     }
 
     /// <summary>Footer line: plan id, the DreamGlass build that printed it, and the solver and checker versions.</summary>
-    private static string Footer(CandidateCutPlan plan, string? solverVersion) =>
+    internal static string Footer(CandidateCutPlan plan, string? solverVersion) =>
         $"Plan {plan.CandidateId} · DreamGlass {HybridCutOptimizer.BuildVersion} · solver {(string.IsNullOrEmpty(solverVersion) ? HybridCutOptimizer.SolverVersion : solverVersion)} · checker {plan.Validation.ValidatorVersion}";
+
+    /// <summary>Short id that is unique per drawing, so several drawings can sit in one page without clashing ids.</summary>
+    internal static string DrawingId(CandidateCutPlan plan, string sourceId) =>
+        Infrastructure.OptimizerJson.Sha256Hex(plan.CandidateId + "|" + sourceId)[..10];
+
+    /// <summary>Pattern direction on the drawn sheet, in words and with an arrow ("" for plain material).</summary>
+    internal static string PatternLegend(PlanSource src, bool directional) => !directional ? ""
+        : SheetTransform.PatternRunsAcrossDisplay(src.PatternAxis, src.DisplayRotationDegrees)
+            ? "pattern runs ↔ left to right on this sheet"
+            : "pattern runs ↕ top to bottom on this sheet";
+
+    /// <summary>A round length whose bar is 60–160 px at this scale, for the scale bar.</summary>
+    private static decimal ScaleBarMm(double pxPerMm)
+    {
+        foreach (decimal mm in new[] { 10m, 20m, 50m, 100m, 200m, 500m, 1000m, 2000m, 5000m, 10000m, 20000m, 50000m })
+            if ((double)mm * pxPerMm >= 60) return mm;
+        return 100000m;
+    }
 
     private static string N(double v) => v.ToString("0.##", Inv);
     private static string Mm(decimal v) => v.ToString("#,0.###", Inv);
@@ -43,8 +115,9 @@ public static class CutPlanSvgRenderer
     /// <summary>Rough text width for fitting labels (Helvetica-like average glyph width).</summary>
     private static double TextWidth(string s, double fontSize) => s.Length * fontSize * 0.56;
 
-    private static string RenderSource(CandidateCutPlan plan, PlanSource src, bool directional, string? solverVersion)
+    private static string RenderSource(CandidateCutPlan plan, PlanSource src, bool directional, PrintContext context)
     {
+        string? solverVersion = context.SolverVersion;
         double w = (double)src.WidthMm, l = (double)src.LengthMm;
         // 270 (v1.2 default): drawn as unrolled on the table, length left to right from the start of the roll.
         // 90: older results, quarter turn clockwise. 0: canonical frame, length top to bottom.
@@ -57,40 +130,49 @@ public static class CutPlanSvgRenderer
 
         const double left = 30;
         double right = purchase is not null && !turned ? 130 : 30;
-        double top = purchase is not null ? 66 : 46;
         double below = purchase is not null && turned ? 86 : 0;
         double pw = dw * scale, ph = dh * scale;
         double font = Math.Clamp(Math.Min(pw, ph) / 40, 9, 14);
-        double totalW = Math.Max(pw + left + right, 760), totalH = top + ph + below + 52;
+        string job = context.Describe();
+        double totalW = Math.Max(pw + left + right, 760);
+        // The order sentence wraps onto as many lines as the sheet's width needs, so it is never cut off.
+        var detailLines = purchase is null ? []
+            : Wrap(OrderDetail(purchase, plan.PredictedResiduals.FirstOrDefault(r => r.RoundingSurplus && r.SourceId == src.SourceId)), 12.5, totalW - 2 * left);
+        double top = purchase is not null ? 66 + 16 * Math.Max(0, detailLines.Count - 1) : 46;
+        double totalH = top + ph + below + 70 + (job.Length > 0 ? 15 : 0);
 
-        // Canonical rect → display rect. Counter-clockwise: (x, y) ↦ (y, W − x); clockwise: (x, y) ↦ (L − y, x).
+        // Canonical → display through the shared transform (counter-clockwise: (x, y) ↦ (y, W − x); clockwise: (x, y) ↦ (L − y, x)).
         (double X, double Y, double W, double H) D(RectMm r)
         {
-            double x = (double)r.X, y = (double)r.Y, rw = (double)r.Width, rh = (double)r.Length;
-            var d = !turned ? (X: x, Y: y, W: rw, H: rh)
-                : ccw ? (X: y, Y: w - x - rw, W: rh, H: rw)
-                : (X: l - y - rh, Y: x, W: rh, H: rw);
-            return (left + d.X * scale, top + d.Y * scale, d.W * scale, d.H * scale);
+            var d = SheetTransform.ToDisplay(r, src.WidthMm, src.LengthMm, src.DisplayRotationDegrees);
+            return (left + (double)d.X * scale, top + (double)d.Y * scale, (double)d.Width * scale, (double)d.Length * scale);
         }
 
         (double X, double Y) P(decimal xmm, decimal ymm)
         {
-            double x = (double)xmm, y = (double)ymm;
-            var d = !turned ? (x, y) : ccw ? (y, w - x) : (l - y, x);
-            return (left + d.Item1 * scale, top + d.Item2 * scale);
+            var (dx, dy) = SheetTransform.ToDisplay(xmm, ymm, src.WidthMm, src.LengthMm, src.DisplayRotationDegrees);
+            return (left + (double)dx * scale, top + (double)dy * scale);
         }
 
+        var onSheet = plan.Placements.Where(p => p.SourceId == src.SourceId).ToList();
+        int cutCount = plan.CutSteps.Count(c => c.SourceId == src.SourceId);
+        string uid = DrawingId(plan, src.SourceId);
+        string hatch = $"hatch-{uid}";
+        string what = src.Kind == SourceKind.NewRoll ? $"new roll {src.RollOfferId}" : $"warehouse piece {src.StockId}";
+        string summary = $"Cutting sheet for {what}, {Mm(src.LengthMm)} mm long and {Mm(src.WidthMm)} mm high: {onSheet.Count} piece{(onSheet.Count == 1 ? "" : "s")} and {cutCount} numbered cut{(cutCount == 1 ? "" : "s")}. "
+                         + "The pieces, cuts and leftovers are also listed as tables with this drawing.";
         var sb = new StringBuilder();
-        sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{N(totalW)}\" height=\"{N(totalH)}\" viewBox=\"0 0 {N(totalW)} {N(totalH)}\" font-family=\"Helvetica, Arial, sans-serif\">\n");
-        sb.Append("<defs><pattern id=\"hatch\" width=\"8\" height=\"8\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(45)\"><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"8\" stroke=\"#9a9a9a\" stroke-width=\"2\"/></pattern></defs>\n");
+        sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{N(totalW)}\" height=\"{N(totalH)}\" viewBox=\"0 0 {N(totalW)} {N(totalH)}\" font-family=\"Helvetica, Arial, sans-serif\" role=\"img\" aria-label=\"{X(summary)}\" data-drawing=\"{uid}\">\n");
+        sb.Append($"<title>{X(summary)}</title>\n");
+        sb.Append($"<defs><pattern id=\"{hatch}\" width=\"8\" height=\"8\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(45)\"><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"8\" stroke=\"#8a8a8a\" stroke-width=\"2\"/></pattern></defs>\n");
         sb.Append("<rect width=\"100%\" height=\"100%\" fill=\"#ffffff\"/>\n");
 
         // ---- header: what this sheet is and, for a new roll, exactly how much to order ------------------------------
         if (purchase is not null)
         {
             sb.Append($"<text x=\"{left}\" y=\"26\" font-size=\"17\" font-weight=\"bold\" fill=\"{Ink}\">{X(OrderHeadline(purchase))}</text>\n");
-            var surplus = plan.PredictedResiduals.FirstOrDefault(r => r.RoundingSurplus && r.SourceId == src.SourceId);
-            sb.Append($"<text x=\"{left}\" y=\"48\" font-size=\"12.5\">{X(OrderDetail(purchase, surplus))}</text>\n");
+            for (int i = 0; i < detailLines.Count; i++)
+                sb.Append($"<text x=\"{left}\" y=\"{48 + 16 * i}\" font-size=\"12.5\">{X(detailLines[i])}</text>\n");
         }
         else
         {
@@ -117,8 +199,8 @@ public static class CutPlanSvgRenderer
         foreach (var r in plan.PredictedResiduals.Where(r => r.SourceId == src.SourceId))
         {
             var (x, y, rw, rh) = D(r.Region);
-            string fill = r.Eligible ? "#d8f0d2" : "url(#hatch)";
-            sb.Append($"<rect x=\"{N(x)}\" y=\"{N(y)}\" width=\"{N(rw)}\" height=\"{N(rh)}\" fill=\"{fill}\" fill-opacity=\"0.85\" stroke=\"#7a7a7a\" stroke-width=\"0.8\"/>\n");
+            string fill = r.Eligible ? "#d8f0d2" : $"url(#{hatch})";
+            sb.Append($"<rect data-leftover=\"{X(r.ResidualId)}\" x=\"{N(x)}\" y=\"{N(y)}\" width=\"{N(rw)}\" height=\"{N(rh)}\" fill=\"{fill}\" fill-opacity=\"0.85\" stroke=\"#6a6a6a\" stroke-width=\"0.8\"/>\n");
             string kindLabel = r.RoundingSurplus
                 ? (r.Eligible ? "reusable surplus" : "surplus (scrap)")
                 : (r.Eligible ? "reusable" : "scrap");
@@ -139,10 +221,10 @@ public static class CutPlanSvgRenderer
         }
 
         // ---- pieces --------------------------------------------------------------------------------------------
-        foreach (var p in plan.Placements.Where(p => p.SourceId == src.SourceId))
+        foreach (var p in onSheet)
         {
             var (x, y, rw, rh) = D(p.Footprint);
-            sb.Append($"<rect x=\"{N(x)}\" y=\"{N(y)}\" width=\"{N(rw)}\" height=\"{N(rh)}\" fill=\"#cfe2f7\" fill-opacity=\"0.9\" stroke=\"{Ink}\" stroke-width=\"1\"/>\n");
+            sb.Append($"<rect data-piece=\"{X(p.PieceInstanceId)}\" x=\"{N(x)}\" y=\"{N(y)}\" width=\"{N(rw)}\" height=\"{N(rh)}\" fill=\"#cfe2f7\" fill-opacity=\"0.9\" stroke=\"{Ink}\" stroke-width=\"1\"/>\n");
             // The cut-out size is read off the footprint actually cut (panel frame), so the label always matches the
             // drawing even if an older or hand-edited result lacks the cutWidthMm/cutLengthMm fields.
             var pp = p.PaddingMm ?? new Padding();
@@ -214,12 +296,12 @@ public static class CutPlanSvgRenderer
         {
             var (x1, y1) = P(step.FromXMm, step.FromYMm);
             var (x2, y2) = P(step.ToXMm, step.ToYMm);
-            sb.Append($"<line x1=\"{N(x1)}\" y1=\"{N(y1)}\" x2=\"{N(x2)}\" y2=\"{N(y2)}\" stroke=\"#c0392b\" stroke-width=\"1.4\"/>\n");
             // Step numbers sit a quarter of the way along the cut so they never cover the centred edge dimensions.
             double along = Math.Abs(x2 - x1) + Math.Abs(y2 - y1);
             double t = along > 10 * font ? 0.25 : 0.5;
             double mx = x1 + (x2 - x1) * t, my = y1 + (y2 - y1) * t;
-            sb.Append($"<circle cx=\"{N(mx)}\" cy=\"{N(my)}\" r=\"{N(font * 0.75)}\" fill=\"#c0392b\"/><text x=\"{N(mx)}\" y=\"{N(my + font * 0.3)}\" font-size=\"{N(font * 0.75)}\" text-anchor=\"middle\" fill=\"#fff\">{step.Sequence}</text>\n");
+            sb.Append($"<g data-cut=\"{step.Sequence}\"><line x1=\"{N(x1)}\" y1=\"{N(y1)}\" x2=\"{N(x2)}\" y2=\"{N(y2)}\" stroke=\"#b02a1d\" stroke-width=\"1.4\"/>");
+            sb.Append($"<circle cx=\"{N(mx)}\" cy=\"{N(my)}\" r=\"{N(font * 0.75)}\" fill=\"#b02a1d\"/><text x=\"{N(mx)}\" y=\"{N(my + font * 0.3)}\" font-size=\"{N(font * 0.75)}\" text-anchor=\"middle\" fill=\"#fff\">{step.Sequence}</text></g>\n");
         }
 
         // ---- order dimension lines (new roll) ------------------------------------------------------------------
@@ -234,8 +316,23 @@ public static class CutPlanSvgRenderer
         }
 
         double legendY = top + ph + below + 20;
-        sb.Append($"<text x=\"{left}\" y=\"{N(legendY)}\" font-size=\"11\" fill=\"#555\">Cut in numbered order, each cut edge to edge (red) · blue = cut-out, dashed = finished size · green = reusable leftover · hatched = scrap · sizes in mm</text>\n");
-        sb.Append($"<text x=\"{left}\" y=\"{N(legendY + 15)}\" font-size=\"9\" fill=\"#888\">{X(Footer(plan, solverVersion))}</text>\n");
+        sb.Append($"<text x=\"{left}\" y=\"{N(legendY)}\" font-size=\"11\" fill=\"#444\">Cut in numbered order, each cut edge to edge (red) · blue = cut-out, dashed = finished size · green = reusable leftover · hatched = scrap · sizes in mm</text>\n");
+
+        // Scale bar and statement (handbook §36, §102): the drawing is proportional, never a ruler.
+        decimal barMm = ScaleBarMm(scale);
+        double barPx = (double)barMm * scale, barY = legendY + 14;
+        sb.Append($"<g stroke=\"#222\" stroke-width=\"1.4\"><line x1=\"{left}\" y1=\"{N(barY)}\" x2=\"{N(left + barPx)}\" y2=\"{N(barY)}\"/><line x1=\"{left}\" y1=\"{N(barY - 4)}\" x2=\"{left}\" y2=\"{N(barY + 4)}\"/><line x1=\"{N(left + barPx)}\" y1=\"{N(barY - 4)}\" x2=\"{N(left + barPx)}\" y2=\"{N(barY + 4)}\"/></g>");
+        string pattern = PatternLegend(src, directional);
+        string scaleText = $"= {Mm(barMm)} mm · proportional drawing, not actual size: cut by the printed sizes" + (pattern.Length > 0 ? $" · {pattern}" : "");
+        sb.Append($"<text x=\"{N(left + barPx + 8)}\" y=\"{N(barY + 4)}\" font-size=\"11\" fill=\"#444\">{X(scaleText)}</text>\n");
+        double footY = legendY + 33;
+        if (job.Length > 0)
+        {
+            sb.Append($"<text x=\"{left}\" y=\"{N(footY)}\" font-size=\"10\" fill=\"#444\">{X(job)}</text>\n");
+            footY += 15;
+        }
+
+        sb.Append($"<text x=\"{left}\" y=\"{N(footY)}\" font-size=\"9\" fill=\"#666\">{X(Footer(plan, solverVersion))}</text>\n");
         sb.Append("</svg>\n");
         return sb.ToString();
     }
@@ -271,10 +368,16 @@ public static class CutPlanSvgRenderer
         (double X, double Y) Pt(decimal x, decimal y) => (left + (double)y * sx, top + (w - (double)x) * sy);
         string M(decimal mm) => Mm(mm / 1000m);
 
+        string uid = DrawingId(plan, "overview:" + src.SourceId);
+        string hatch = $"hatch-{uid}", rest = $"rest-{uid}";
+        string summary = purchase.FixedLength
+            ? $"The whole fixed-length roll {offer.OfferId}, {M(full)} m long, with the pieces drawn on it."
+            : $"The supplier's roll {offer.OfferId}, {M(full)} m long: the first {M(ordered)} m are ordered and hold the pieces; the other {M(full - ordered)} m stay with the supplier.";
         var sb = new StringBuilder();
-        sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{N(totalW)}\" height=\"{N(totalH)}\" viewBox=\"0 0 {N(totalW)} {N(totalH)}\" font-family=\"Helvetica, Arial, sans-serif\">\n");
-        sb.Append("<defs><pattern id=\"hatch\" width=\"8\" height=\"8\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(45)\"><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"8\" stroke=\"#9a9a9a\" stroke-width=\"2\"/></pattern>");
-        sb.Append("<pattern id=\"rest\" width=\"10\" height=\"10\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(-45)\"><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"10\" stroke=\"#d3d7dd\" stroke-width=\"3\"/></pattern></defs>\n");
+        sb.Append($"<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{N(totalW)}\" height=\"{N(totalH)}\" viewBox=\"0 0 {N(totalW)} {N(totalH)}\" font-family=\"Helvetica, Arial, sans-serif\" role=\"img\" aria-label=\"{X(summary)}\" data-drawing=\"{uid}\">\n");
+        sb.Append($"<title>{X(summary)}</title>\n");
+        sb.Append($"<defs><pattern id=\"{hatch}\" width=\"8\" height=\"8\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(45)\"><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"8\" stroke=\"#8a8a8a\" stroke-width=\"2\"/></pattern>");
+        sb.Append($"<pattern id=\"{rest}\" width=\"10\" height=\"10\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(-45)\"><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"10\" stroke=\"#d3d7dd\" stroke-width=\"3\"/></pattern></defs>\n");
         sb.Append("<rect width=\"100%\" height=\"100%\" fill=\"#ffffff\"/>\n");
 
         // ---- header -----------------------------------------------------------------------------------------------
@@ -291,7 +394,7 @@ public static class CutPlanSvgRenderer
         {
             double rx = left + lo * sx, rw = (lf - lo) * sx;
             sb.Append($"<rect x=\"{N(rx)}\" y=\"{N(top)}\" width=\"{N(rw)}\" height=\"{N(ph)}\" fill=\"#eef0f3\"/>");
-            sb.Append($"<rect x=\"{N(rx)}\" y=\"{N(top)}\" width=\"{N(rw)}\" height=\"{N(ph)}\" fill=\"url(#rest)\"/>\n");
+            sb.Append($"<rect x=\"{N(rx)}\" y=\"{N(top)}\" width=\"{N(rw)}\" height=\"{N(ph)}\" fill=\"url(#{rest})\"/>\n");
             string restLabel = $"stays with the supplier · {M(full - ordered)} m not bought";
             if (TextWidth(restLabel, 12) < rw - 12)
                 sb.Append($"<text x=\"{N(rx + rw / 2)}\" y=\"{N(top + ph / 2 + 4)}\" font-size=\"12\" text-anchor=\"middle\" fill=\"#6b7280\">{X(restLabel)}</text>\n");
@@ -302,7 +405,7 @@ public static class CutPlanSvgRenderer
         foreach (var r in plan.PredictedResiduals.Where(r => r.SourceId == src.SourceId))
         {
             var (x, y, rw, rh) = R(r.Region);
-            sb.Append($"<rect x=\"{N(x)}\" y=\"{N(y)}\" width=\"{N(rw)}\" height=\"{N(rh)}\" fill=\"{(r.Eligible ? "#d8f0d2" : "url(#hatch)")}\" stroke=\"#9a9a9a\" stroke-width=\"0.5\"/>\n");
+            sb.Append($"<rect x=\"{N(x)}\" y=\"{N(y)}\" width=\"{N(rw)}\" height=\"{N(rh)}\" fill=\"{(r.Eligible ? "#d8f0d2" : $"url(#{hatch})")}\" stroke=\"#9a9a9a\" stroke-width=\"0.5\"/>\n");
         }
 
         foreach (var p in plan.Placements.Where(p => p.SourceId == src.SourceId))
@@ -389,6 +492,27 @@ public static class CutPlanSvgRenderer
         return p.FixedLength
             ? $"Layout needs {needed}; the whole fixed length is used as stock.{rest}"
             : $"Layout needs {needed} → rounded up to whole metres.{rest}";
+    }
+
+    /// <summary>Greedy word wrap by the same rough glyph width the labels use.</summary>
+    internal static List<string> Wrap(string text, double fontSize, double width)
+    {
+        var lines = new List<string>();
+        var line = new StringBuilder();
+        foreach (var word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (line.Length > 0 && TextWidth(line + " " + word, fontSize) > width)
+            {
+                lines.Add(line.ToString());
+                line.Clear();
+            }
+
+            if (line.Length > 0) line.Append(' ');
+            line.Append(word);
+        }
+
+        if (line.Length > 0) lines.Add(line.ToString());
+        return lines;
     }
 
     private static string LowerFirst(string s) => s.Length == 0 ? s : char.ToLowerInvariant(s[0]) + s[1..];

@@ -115,7 +115,8 @@ public class AcceptanceTests
         var svg = DreamGlass.Optimizer.Printing.CutPlanSvgRenderer.Render(best, true).Single().Svg;
         Assert.Contains("ORDER FROM SUPPLIER: 1 m of roll-2800 (2,800 mm high)", svg);
         // 96 × 2,800 is below the 200 mm minimum short side, so it is scrap, not warehouse stock.
-        Assert.Contains("Layout needs 904 mm (900 + 4 padding) → rounded up to whole metres. The 96 mm left over is scrap: too small to keep (short side 96 mm &lt; minimum 200 mm).", svg);
+        // The sentence may wrap over several lines on a narrow sheet; read the drawing's text as a whole.
+        Assert.Contains("Layout needs 904 mm (900 + 4 padding) → rounded up to whole metres. The 96 mm left over is scrap: too small to keep (short side 96 mm < minimum 200 mm).", T.SvgText(svg));
         Assert.Contains("Cut-out 604 × 904 mm", svg);
         Assert.Contains("finished 600 × 900 · pad 2", svg);
         Assert.Contains("Cut-out 460 × 710 mm", svg);

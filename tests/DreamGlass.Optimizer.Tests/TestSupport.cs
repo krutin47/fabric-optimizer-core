@@ -57,6 +57,10 @@ internal static class T
             Search = new SearchSettings { TimeBudgetMs = timeMs, Seed = seed, MaxCandidates = maxCandidates },
         };
 
+    /// <summary>All visible text of an SVG, in document order, joined by spaces and decoded (wrapped lines read as one).</summary>
+    public static string SvgText(string svg) =>
+        System.Net.WebUtility.HtmlDecode(string.Join(" ", System.Text.RegularExpressions.Regex.Matches(svg, "<text[^>]*>([^<]*)").Select(m => m.Groups[1].Value)));
+
     /// <summary>Deterministic, work-bounded options so tests are fast and reproducible.</summary>
     public static OptimizationOptions Det(int work = 300, int stagnation = 300) =>
         new() { Mode = ExecutionMode.Deterministic, WorkBudget = work, StagnationLimit = stagnation, ValidateEveryKeptPlan = true };

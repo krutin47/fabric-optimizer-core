@@ -35,7 +35,7 @@ static int Usage()
 {
     Console.Error.WriteLine("""
         DreamGlass optimiser CLI
-          optimize <job.json> [--out result.json] [--svg <dir>] [--time <ms>] [--deterministic] [--work <units>] [--objective cheapest|historical|proposed] [--scrap-tolerance <m2>]
+          optimize <job.json> [--out result.json] [--svg <dir>] [--html <dir>] [--time <ms>] [--deterministic] [--work <units>] [--objective cheapest|historical|proposed] [--scrap-tolerance <m2>]
           validate <job.json> <result.json>
           bench [--sizes 10,50,200] [--seeds 3] [--time <ms>] [--deterministic] [--work <units>] [--csv]
         """);
@@ -99,6 +99,17 @@ static int Optimize(string[] a)
         }
     }
 
+    if (Opt(a, "--html") is string htmlDir && result.Status == RunStatus.Succeeded)
+    {
+        Directory.CreateDirectory(htmlDir);
+        foreach (var c in result.Candidates)
+        {
+            string file = Path.Combine(htmlDir, $"rank{c.Rank}-cut-plan.html");
+            File.WriteAllText(file, CutPlanDocument.Render(c, job, result, DateTimeOffset.UtcNow));
+            Console.WriteLine($"  cut plan: {file}");
+        }
+    }
+
     return result.Status == RunStatus.Succeeded ? 0 : 1;
 }
 
@@ -134,6 +145,10 @@ static void PrintSummary(OptimizationResult r)
     Console.WriteLine($"  phases: {string.Join(", ", d.Phases.Select(p => $"{p.Phase} {p.ElapsedMs} ms"))}");
     if (d.Exact is { } ex) Console.WriteLine($"  exact: {(ex.Attempted ? (ex.Completed ? "completed" : "aborted") : "not attempted")} in {ex.ElapsedMs} ms, {ex.StatesExplored} states, {ex.WorkUnits} splits — {ex.Reason}");
     if (d.PurchasedAreaLowerBoundM2 is decimal lb) Console.WriteLine($"  purchased-area lower bound: {lb} m² ({d.PurchasedAreaLowerBoundMethod})");
+    if (d.PurchaseCostLowerBound is decimal cl) Console.WriteLine($"  purchase-cost lower bound: {cl:0.00} ({d.PurchaseCostLowerBoundMethod})");
+    if (d.DuplicateLayoutsSkipped + d.UncompetitiveLayoutsSkipped > 0)
+        Console.WriteLine($"  skipped before validation: {d.DuplicateLayoutsSkipped} duplicate and {d.UncompetitiveLayoutsSkipped} uncompetitive layouts");
+    foreach (var rc in d.RejectedCandidates) Console.WriteLine($"  REJECTED by the validator ({rc.Origin}): {string.Join("; ", rc.Failures.Select(f => f.Code))}");
     foreach (var c in r.Candidates)
     {
         var m = c.Metrics;
@@ -142,7 +157,8 @@ static void PrintSummary(OptimizationResult r)
               (p.PaddingLengthMm > 0 ? $" ({p.LengthWithoutPaddingMm} + {p.PaddingLengthMm} padding)" : "") +
               $", rounded up, surplus {p.RoundingSurplusMm} mm, cost {p.PurchaseCost:0.00} {p.Currency}"
             : "no purchase";
-        Console.WriteLine($"  #{c.Rank} {c.CandidateId} [{string.Join(", ", c.Tags)}] {c.QualityStatus}{(c.Bound is { } b ? $" gap {b.GapM2} m²" : "")}");
+        Console.WriteLine($"  #{c.Rank} {c.CandidateId} [{string.Join(", ", c.Tags)}] {c.QualityStatus}{(c.CostBound is { } cb ? $" · price gap {cb.GapM2:0.00}{(cb.Proven ? " (proven bound)" : "")}" : "")}{(c.Bound is { } b ? $" · area gap {b.GapM2} m²" : "")}");
+        Console.WriteLine($"     {CutPlanDocument.QualityText(c)}");
         Console.WriteLine($"     {buy}; stock used {m.ExistingStockAreaConsumedM2} m² in {m.WarehouseSourcesUsed} remnant(s)");
         Console.WriteLine($"     required {m.RequiredCutAreaM2} m², purchased {m.PurchasedAreaM2} m², scrap {m.UnusableScrapAreaM2} m², reusable {m.ReusableResidualAreaM2} m² (largest {m.LargestReusableAreaM2} m²), cuts {m.TotalCuts}, utilisation {m.MaterialUtilization:P2}, validation {(c.Validation.Passed ? "PASS" : "FAIL")}");
     }

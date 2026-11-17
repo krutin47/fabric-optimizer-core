@@ -282,3 +282,10 @@ details.tech { margin-top: 16px; }
 details.tech > summary { color: var(--muted); font-weight: 600; }
 table.kv { width: auto; margin-bottom: 10px; }
 table.kv th { text-align: left; padding-right: 16px; }
+
+/* Screen-reader-only text (status messages). */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* Table ↔ drawing highlight: a thick outline plus colour, so it does not rely on colour alone. */
+.print [data-piece].hl { fill: #ffd54f; stroke: #000; stroke-width: 3; }
+.print [data-cut].hl line { stroke-width: 5; }
+tr[data-piece].hl, tr[data-cut].hl, tr[data-piece]:focus-visible, tr[data-cut]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; background: #fff7d6; }
